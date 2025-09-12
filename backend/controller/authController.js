@@ -2,7 +2,7 @@ import crypto from "crypto";
 import * as UserModel from "../model/userModel.js";
 import * as AuthModel from "../model/authModel.js";
 
-const DEFAULT_EXPIRES_MS = 1000 * 60 * 60 * 24 * 365; // 1 ano
+const DEFAULT_EXPIRES_MS = 1000 * 60 * 60 * 24;
 
 export async function login(req, res) {
     try {

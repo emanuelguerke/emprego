@@ -17,8 +17,13 @@ export async function login({ usuario, senha }) {
     return res.data;
 }
 
-export async function register({ nome, usuario, senha }) {
-    const res = await api.post("/users", { nome, usuario, senha });
+export async function register({ nome, usuario, senha, email, telefone }) {
+    let name = nome;
+    let username = usuario;
+    let password = senha;
+    let phone = telefone;
+
+    const res = await api.post("/users", { name, username, password, email, phone });
     return res.data;
 }
 
