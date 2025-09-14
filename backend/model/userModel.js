@@ -32,8 +32,8 @@ export function getUserById(id) {
 
 export function createUser(user) {
     return new Promise((resolve, reject) => {
-        const sql = "INSERT INTO usuario (id, nome, usuario, senha, email, telefone) VALUES (?, ?, ?, ?, ?, ?)";
-        db.query(sql, [user.id, user.nome, user.usuario, user.senha, user.email || null, user.telefone || null], (err, result) => {
+        const sql = "INSERT INTO usuario (id, nome, usuario, senha, email, telefone, role) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        db.query(sql, [user.id, user.nome, user.usuario, user.senha, user.email || null, user.telefone || null, user.role || "user"], (err, result) => {
             if (err) return reject(err);
             resolve({ id: user.id, ...user });
         });
@@ -42,8 +42,8 @@ export function createUser(user) {
 
 export function updateUser(id, user) {
     return new Promise((resolve, reject) => {
-        const sql = "UPDATE usuario SET nome = ?, usuario = ?, senha = ?, email = ?, telefone = ? WHERE id = ?";
-        db.query(sql, [user.nome, user.usuario, user.senha, user.email || null, user.telefone || null, id], (err, result) => {
+        const sql = "UPDATE usuario SET nome = ?, usuario = ?, senha = ?, email = ?, telefone = ?, role = ? WHERE id = ?";
+        db.query(sql, [user.nome, user.usuario, user.senha, user.email || null, user.telefone || null, user.role || "user", id], (err, result) => {
             if (err) return reject(err);
             resolve(result);
         });

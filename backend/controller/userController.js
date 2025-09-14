@@ -117,11 +117,19 @@ export async function updateUser(req, res) {
         const id = req.params.id;
         const payload = req.body || {};
 
+        // require authentication info present
+        if (!req.user) return res.status(401).json({ message: "autenticação necessária" });
+
+        // ownership: user can update only own resource unless role allows
+        if (req.user.role !== "company" && req.user.id !== id) {
+            return res.status(403).json({ message: "ação não permitida para este usuário" });
+        }
+
+        // rest of validation and update logic (reuse existing validateUserPayload)
         const errors = validateUserPayload(payload, true);
 
-        // if updating usuario, check uniqueness (exclude current user)
-        if (payload.username) {
-            const existing = await UserModel.getUserByUsuario(payload.username);
+        if (payload.usuario) {
+            const existing = await UserModel.getUserByUsuario(payload.usuario);
             if (existing && existing.id !== id) {
                 errors.push({ field: "usuario", error: "already exists" });
             }
@@ -131,22 +139,16 @@ export async function updateUser(req, res) {
             return res.status(404).json({ message: "validation erro", code: "UNPROCESSABLE", detail: errors });
         }
 
-        // prepare updated values (ensure nome uppercase if provided)
-        const user = {
-            nome: payload.name !== undefined ? payload.name.toString().trim().toUpperCase() : undefined,
-            usuario: payload.username,
-            senha: payload.password,
-            email: payload.email !== undefined ? payload.email : undefined,
-            telefone: payload.phone !== undefined ? payload.phone : undefined,
-        };
+        const current = await UserModel.getUserById(id);
+        if (!current) return res.status(404).json({ message: "User not found" });
 
-        // for model we want concrete values; ensure fields are defined
         const toSave = {
-            nome: user.nome ?? (await UserModel.getUserById(id)).nome,
-            usuario: user.usuario ?? (await UserModel.getUserById(id)).usuario,
-            senha: user.senha ?? (await UserModel.getUserById(id)).senha,
-            email: user.email ?? (await UserModel.getUserById(id)).email,
-            telefone: user.telefone ?? (await UserModel.getUserById(id)).telefone,
+            nome: payload.nome !== undefined ? payload.nome.toString().trim().toUpperCase() : current.nome,
+            usuario: payload.usuario !== undefined ? payload.usuario : current.usuario,
+            senha: payload.senha !== undefined ? payload.senha : current.senha,
+            email: payload.email !== undefined ? payload.email : current.email,
+            telefone: payload.telefone !== undefined ? payload.telefone : current.telefone,
+            role: payload.role !== undefined ? payload.role : current.role,
         };
 
         await UserModel.updateUser(id, toSave);
@@ -158,7 +160,15 @@ export async function updateUser(req, res) {
 
 export async function deleteUser(req, res) {
     try {
-        await UserModel.deleteUser(req.params.id);
+        const id = req.params.id;
+        if (!req.user) return res.status(401).json({ message: "autenticação necessária" });
+
+        // ownership: only owner or company role can delete
+        if (req.user.role !== "company" && req.user.id !== id) {
+            return res.status(403).json({ message: "ação não permitida para este usuário" });
+        }
+
+        await UserModel.deleteUser(id);
         res.status(204).end();
     } catch (err) {
         res.status(500).json({ error: err.message });

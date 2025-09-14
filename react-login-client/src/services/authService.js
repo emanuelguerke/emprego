@@ -14,16 +14,11 @@ api.interceptors.request.use((config) => {
 
 export async function login({ usuario, senha }) {
     const res = await api.post("/auth/login", { usuario, senha });
-    return res.data;
+    return res.data; // { token, exp }
 }
 
-export async function register({ nome, usuario, senha, email, telefone }) {
-    let name = nome;
-    let username = usuario;
-    let password = senha;
-    let phone = telefone;
-
-    const res = await api.post("/users", { name, username, password, email, phone });
+export async function register(payload) {
+    const res = await api.post("/users", payload);
     return res.data;
 }
 
@@ -40,17 +35,17 @@ export function isAuthenticated() {
     return !!getToken();
 }
 
-// remove token localmente (sincroniza com server via logoutServer quando desejado)
+// named export 'logout' expected by Dashboard.jsx
 export function logout() {
     localStorage.removeItem("token");
 }
 
-// chama o endpoint /auth/logout para revogar o token no servidor e limpa localmente
+// named export to call server logout (if implemented); always clears local token
 export async function logoutServer() {
     try {
         await api.post("/auth/logout");
     } catch (err) {
-        // ignore server errors, sempre limpa token localmente
+        // ignore server errors
     } finally {
         localStorage.removeItem("token");
     }
