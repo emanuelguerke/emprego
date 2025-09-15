@@ -1,7 +1,17 @@
 import axios from "axios";
 
+const DEFAULT_BASE = "http://localhost:8080";
+
+function getStoredBase() {
+  try {
+    return localStorage.getItem("api_base") || DEFAULT_BASE;
+  } catch {
+    return DEFAULT_BASE;
+  }
+}
+
 const api = axios.create({
-    baseURL: "http://localhost:8080",
+    baseURL: getStoredBase(),
     headers: { "Content-Type": "application/json" },
 });
 
@@ -12,9 +22,9 @@ api.interceptors.request.use((config) => {
     return config;
 });
 
-export async function login({ usuario, senha }) {
-    const res = await api.post("/auth/login", { usuario, senha });
-    return res.data; // { token, exp }
+export async function login({ username, password }) {
+    const res = await api.post("/login", { username, password });
+    return res.data; // { token, expires_in }
 }
 
 export async function register(payload) {
@@ -35,20 +45,32 @@ export function isAuthenticated() {
     return !!getToken();
 }
 
-// named export 'logout' expected by Dashboard.jsx
+// local logout
 export function logout() {
     localStorage.removeItem("token");
 }
 
-// named export to call server logout (if implemented); always clears local token
+// server logout (revoga token no servidor)
 export async function logoutServer() {
     try {
-        await api.post("/auth/logout");
+        await api.post("/logout");
     } catch (err) {
-        // ignore server errors
+        // ignore
     } finally {
         localStorage.removeItem("token");
     }
+}
+
+// allow runtime update of baseURL (Setup page will call this)
+export function setApiBase(baseUrl) {
+    const final = baseUrl || DEFAULT_BASE;
+    try { localStorage.setItem("api_base", final); } catch {}
+    api.defaults.baseURL = final;
+}
+
+// expose current base for UI
+export function getApiBase() {
+    return api.defaults.baseURL || DEFAULT_BASE;
 }
 
 export default api;

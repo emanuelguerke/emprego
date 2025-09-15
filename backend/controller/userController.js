@@ -84,10 +84,12 @@ export async function createUser(req, res) {
         const payload = req.body || {};
         const errors = validateUserPayload(payload, false);
 
-        // check uniqueness of usuario
+        // check uniqueness of username -> return 409 if exists
         if (payload.username) {
             const existing = await UserModel.getUserByUsuario(payload.username);
-            if (existing) errors.push({ field: "usuario", error: "already exists" });
+            if (existing) {
+                return res.status(409).json({ message: "username already exists" });
+            }
         }
 
         if (errors.length) {
@@ -103,10 +105,13 @@ export async function createUser(req, res) {
             senha: payload.password,
             email: payload.email || null,
             telefone: payload.phone || null,
+            role: payload.role || "user",
         };
 
-        const created = await UserModel.createUser(user);
-        res.status(201).json(created);
+        await UserModel.createUser(user);
+
+        // respond minimal success as requested
+        return res.status(201).json({ message: "created" });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

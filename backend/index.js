@@ -9,8 +9,8 @@ const port = 8080;
 app.use(express.json());
 app.use(cors());
 
-// rota pública de auth (login/logout)
-app.use("/auth", authRoute);
+// monta as rotas de auth na raiz -> /login e /logout
+app.use("/", authRoute);
 
 // montar /users sem proteção aqui — proteção é aplicada por rota no userRoute
 app.use("/users", userRoute);
