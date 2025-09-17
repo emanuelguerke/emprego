@@ -1,181 +1,191 @@
 import * as UserModel from "../model/userModel.js";
 import { v4 as uuidv4 } from "uuid";
 
-// validações conforme especificação
-function validateUserPayload(payload, isUpdate = false) {
-    const errors = [];
-    
-    // nome: required on create, length 4-150, store uppercase
-    if (!isUpdate || (payload.name !== undefined)) {
-        const nome = (payload.name || "").toString().trim();
-        if (!nome) {
-            errors.push({ field: "nome", error: "required" });
-        } else if (nome.length < 4) {
-            errors.push({ field: "nome", error: "too short" });
-        } else if (nome.length > 150) {
-            errors.push({ field: "nome", error: "too long" });
-        }
-    }
-
-    // usuario: required on create, unique, 3-20, no spaces, no special chars
-    if (!isUpdate || (payload.username !== undefined)) {
-        const usuario = (payload.username || "").toString();
-        const usernameRegex = /^[A-Za-z0-9_]{3,20}$/;
-        if (!usuario) {
-            errors.push({ field: "usuario", error: "required" });
-        } else if (!usernameRegex.test(usuario)) {
-            errors.push({ field: "usuario", error: "invalid format" });
-        }
-    }
-
-    // senha: required on create, 3-20, no spaces/special
-    if (!isUpdate || (payload.password !== undefined)) {
-        const senha = (payload.password || "").toString();
-        const senhaRegex = /^[A-Za-z0-9]{3,20}$/;
-        if (!senha) {
-            errors.push({ field: "senha", error: "required" });
-        } else if (!senhaRegex.test(senha)) {
-            errors.push({ field: "senha", error: "invalid format" });
-        }
-    }
-
-    // email: optional, if present must be valid
-    if (payload.email !== undefined && payload.email !== null && payload.email !== "") {
-        const email = (payload.email || "").toString().trim();
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-            errors.push({ field: "email", error: "invalid email" });
-        }
-    }
-
-    // telefone: optional, 10-14 digits
-    if (payload.phone !== undefined && payload.phone !== null && payload.phone !== "") {
-        const telefone = (payload.phone || "").toString().trim();
-        const telRegex = /^\d{10,14}$/;
-        if (!telRegex.test(telefone)) {
-            errors.push({ field: "telefone", error: "invalid phone" });
-        }
-    }
-
-    return errors;
+// validações simples reutilizáveis
+function isValidEmail(email) {
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return re.test(String(email).toLowerCase());
+}
+function isValidPhone(phone) {
+  return /^\d{10,14}$/.test(String(phone));
+}
+function isValidName(name) {
+  const s = (name || "").toString().trim();
+  return s.length >= 4 && s.length <= 150;
+}
+function isValidPassword(pw) {
+  return /^[A-Za-z0-9]{3,20}$/.test(String(pw));
 }
 
+// GET /users -> (mantém existente) ...
 export async function getUsers(req, res) {
-    try {
-        const users = await UserModel.getAllUsers();
-        res.status(200).json(users);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+  try {
+    const users = await UserModel.getAllUsers();
+    res.status(200).json(users);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 }
 
+// GET /users/:id -> retorna apenas o próprio usuário (ownership)
 export async function getUser(req, res) {
-    try {
-        const user = await UserModel.getUserById(req.params.id);
-        if (!user) return res.status(404).json({ message: "User not found" });
-        res.json(user);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
+  try {
+    // middleware de autenticação deve preencher req.user
+    if (!req.user) return res.status(401).json({ message: "invalid token" });
+
+    const id = req.params.id;
+    // ownership check: só pode ver próprio perfil
+    if (req.user.id !== id) return res.status(403).json({ message: "forbidden" });
+
+    const user = await UserModel.getUserById(id);
+    if (!user) return res.status(404).json({ message: "user not found" });
+
+    return res.status(200).json({
+      name: user.nome || "",
+      username: user.usuario || "",
+      email: user.email || "",
+      phone: user.telefone || "",
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// PATCH /users/:id -> atualiza (apenas próprio usuário). username não pode ser alterado.
+export async function updateUser(req, res) {
+  try {
+    if (!req.user) return res.status(401).json({ message: "invalid token" });
+
+    const id = req.params.id;
+    if (req.user.id !== id) return res.status(403).json({ message: "forbidden" });
+
+    const payload = req.body || {};
+    // username must not be changed
+    if (payload.username !== undefined && payload.username !== null && payload.username !== "") {
+      // reject any attempt to change username
+      return res.status(422).json({
+        message: "Validation error",
+        code: "UNPROCESSABLE",
+        details: [{ field: "username", error: "immutable" }],
+      });
     }
+
+    const errors = [];
+    if (payload.name !== undefined && !isValidName(payload.name)) {
+      errors.push({ field: "name", error: "invalid_format" });
+    }
+    if (payload.email !== undefined && payload.email !== "" && !isValidEmail(payload.email)) {
+      errors.push({ field: "email", error: "invalid_format" });
+    }
+    if (payload.phone !== undefined && payload.phone !== "" && !isValidPhone(payload.phone)) {
+      errors.push({ field: "phone", error: "invalid_format" });
+    }
+    if (payload.password !== undefined && payload.password !== "" && !isValidPassword(payload.password)) {
+      errors.push({ field: "password", error: "invalid_format" });
+    }
+
+    if (errors.length) {
+      return res.status(422).json({
+        message: "Validation error",
+        code: "UNPROCESSABLE",
+        details: errors,
+      });
+    }
+
+    const current = await UserModel.getUserById(id);
+    if (!current) return res.status(404).json({ message: "user not found" });
+
+    // prepare fields (preserve existing where not provided)
+    const toSave = {
+      nome: payload.name !== undefined ? payload.name.toString().trim().toUpperCase() : current.nome,
+      usuario: current.usuario, // username cannot change
+      senha: payload.password !== undefined && payload.password !== "" ? payload.password : current.senha,
+      email: payload.email !== undefined ? (payload.email || null) : current.email,
+      telefone: payload.phone !== undefined ? (payload.phone || null) : current.telefone,
+      role: current.role || "user",
+    };
+
+    await UserModel.updateUser(id, toSave);
+    return res.status(200).json({ message: "sucess" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// DELETE /users/:id -> apenas próprio usuário
+export async function deleteUser(req, res) {
+  try {
+    if (!req.user) return res.status(401).json({ message: "invalid token" });
+
+    const id = req.params.id;
+    if (req.user.id !== id) return res.status(403).json({ message: "forbidden" });
+
+    const current = await UserModel.getUserById(id);
+    if (!current) return res.status(404).json({ message: "user not found" });
+
+    await UserModel.deleteUser(id);
+    return res.status(200).json({ message: "User deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 }
 
 export async function createUser(req, res) {
-    try {
-        const payload = req.body || {};
-        const errors = validateUserPayload(payload, false);
+  try {
+    const payload = req.body || {};
+    const errors = [];
 
-        // check uniqueness of username -> return 409 if exists
-        if (payload.username) {
-            const existing = await UserModel.getUserByUsuario(payload.username);
-            if (existing) {
-                return res.status(409).json({ message: "username already exists" });
-            }
-        }
-
-        if (errors.length) {
-            return res.status(404).json({ message: "validation erro", code: "UNPROCESSABLE", detail: errors });
-        }
-
-        // prepare user
-        const id = uuidv4();
-        const user = {
-            id,
-            nome: (payload.name || "").toString().trim().toUpperCase(),
-            usuario: payload.username,
-            senha: payload.password,
-            email: payload.email || null,
-            telefone: payload.phone || null,
-            role: payload.role || "user",
-        };
-
-        await UserModel.createUser(user);
-
-        // respond minimal success as requested
-        return res.status(201).json({ message: "created" });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
+    // name required, 4-150
+    if (!payload.name || !isValidName(payload.name)) {
+      errors.push({ field: "name", error: "too short" });
     }
-}
 
-export async function updateUser(req, res) {
-    try {
-        const id = req.params.id;
-        const payload = req.body || {};
-
-        // require authentication info present
-        if (!req.user) return res.status(401).json({ message: "autenticação necessária" });
-
-        // ownership: user can update only own resource unless role allows
-        if (req.user.role !== "company" && req.user.id !== id) {
-            return res.status(403).json({ message: "ação não permitida para este usuário" });
-        }
-
-        // rest of validation and update logic (reuse existing validateUserPayload)
-        const errors = validateUserPayload(payload, true);
-
-        if (payload.usuario) {
-            const existing = await UserModel.getUserByUsuario(payload.usuario);
-            if (existing && existing.id !== id) {
-                errors.push({ field: "usuario", error: "already exists" });
-            }
-        }
-
-        if (errors.length) {
-            return res.status(404).json({ message: "validation erro", code: "UNPROCESSABLE", detail: errors });
-        }
-
-        const current = await UserModel.getUserById(id);
-        if (!current) return res.status(404).json({ message: "User not found" });
-
-        const toSave = {
-            nome: payload.nome !== undefined ? payload.nome.toString().trim().toUpperCase() : current.nome,
-            usuario: payload.usuario !== undefined ? payload.usuario : current.usuario,
-            senha: payload.senha !== undefined ? payload.senha : current.senha,
-            email: payload.email !== undefined ? payload.email : current.email,
-            telefone: payload.telefone !== undefined ? payload.telefone : current.telefone,
-            role: payload.role !== undefined ? payload.role : current.role,
-        };
-
-        await UserModel.updateUser(id, toSave);
-        res.status(204).end();
-    } catch (err) {
-        res.status(500).json({ error: err.message });
+    // username required, 3-20, letters/numbers/underscore
+    if (!payload.username || !/^[A-Za-z0-9_]{3,20}$/.test(payload.username)) {
+      errors.push({ field: "username", error: "invalid format" });
     }
-}
 
-export async function deleteUser(req, res) {
-    try {
-        const id = req.params.id;
-        if (!req.user) return res.status(401).json({ message: "autenticação necessária" });
-
-        // ownership: only owner or company role can delete
-        if (req.user.role !== "company" && req.user.id !== id) {
-            return res.status(403).json({ message: "ação não permitida para este usuário" });
-        }
-
-        await UserModel.deleteUser(id);
-        res.status(204).end();
-    } catch (err) {
-        res.status(500).json({ error: err.message });
+    // password required, 3-20, alphanumeric
+    if (!payload.password || !isValidPassword(payload.password)) {
+      errors.push({ field: "password", error: "invalid format" });
     }
+
+    // email optional, if present validate
+    if (payload.email !== undefined && payload.email !== null && payload.email !== "") {
+      if (!isValidEmail(payload.email)) errors.push({ field: "email", error: "invalid_format" });
+    }
+
+    // phone optional, if present validate
+    if (payload.phone !== undefined && payload.phone !== null && payload.phone !== "") {
+      if (!isValidPhone(payload.phone)) errors.push({ field: "phone", error: "invalid_format" });
+    }
+
+    // username uniqueness -> 409 if exists
+    if (payload.username) {
+      const existing = await UserModel.getUserByUsuario(payload.username);
+      if (existing) {
+        return res.status(409).json({ message: "username already exists" });
+      }
+    }
+
+    if (errors.length) {
+      return res.status(404).json({ message: "validation erro", code: "UNPROCESSABLE", detail: errors });
+    }
+
+    const id = uuidv4();
+    const user = {
+      id,
+      nome: (payload.name || "").toString().trim().toUpperCase(),
+      usuario: payload.username,
+      senha: payload.password,
+      email: payload.email || null,
+      telefone: payload.phone || null,
+      role: "user",
+    };
+
+    await UserModel.createUser(user);
+    return res.status(201).json({ message: "created" });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
 }

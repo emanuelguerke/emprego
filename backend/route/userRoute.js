@@ -10,7 +10,9 @@ router.post("/", createUser);
 // Rotas protegidas por token
 router.get("/", verifyToken, getUsers);
 router.get("/:id", verifyToken, getUser);
+// aceitar tanto PUT quanto PATCH para atualização
 router.put("/:id", verifyToken, updateUser);
+router.patch("/:id", verifyToken, updateUser);
 router.delete("/:id", verifyToken, deleteUser);
 
 export default router;
