@@ -20,6 +20,17 @@ export function revokeToken(token) {
     });
 }
 
+// revoke all tokens for a given user (useful on account deletion)
+export function revokeTokensByUser(id_usuario) {
+    return new Promise((resolve, reject) => {
+        const sql = "UPDATE token_usuarios SET revogado = TRUE WHERE id_usuario = ?";
+        db.query(sql, [id_usuario], (err, result) => {
+            if (err) return reject(err);
+            resolve(result);
+        });
+    });
+}
+
 export function getTokenRecord(token) {
     return new Promise((resolve, reject) => {
         const sql = "SELECT * FROM token_usuarios WHERE token = ?";

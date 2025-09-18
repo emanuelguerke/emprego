@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { getToken, logout, getApiBase } from "../services/authService";
+import { getToken, logoutServer, getApiBase } from "../services/authService";
 import "../styles/app.css";
 
 export default function Home() {
@@ -22,10 +22,18 @@ export default function Home() {
 
   const payload = decodeToken();
 
+  async function handleLogout() {
+    // call server to revoke token, then navigate (logoutServer removes token locally in finally)
+    try {
+      await logoutServer();
+    } finally {
+      navigate("/");
+    }
+  }
+
   function goToProfile() {
     if (!payload || !payload.sub) {
       // no token -> go to login
-      logout();
       navigate("/login");
       return;
     }
@@ -39,7 +47,7 @@ export default function Home() {
           <h2>Home</h2>
           <div style={{ display: "flex", gap: 8 }}>
             <div style={{ fontSize: 12, color: "#666", alignSelf: "center" }}>{getApiBase()}</div>
-            <button onClick={() => { logout(); navigate("/"); }} style={{ padding: "8px 12px", borderRadius: 8, background: "#ef4444", color: "#fff", border: "none", cursor: "pointer" }}>
+            <button onClick={handleLogout} style={{ padding: "8px 12px", borderRadius: 8, background: "#ef4444", color: "#fff", border: "none", cursor: "pointer" }}>
               Logout
             </button>
           </div>

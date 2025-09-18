@@ -30,12 +30,14 @@ export function getUserById(id) {
     });
 }
 
+// agora insertion sem fornecer id (DB autoincrement)
 export function createUser(user) {
     return new Promise((resolve, reject) => {
-        const sql = "INSERT INTO usuario (id, nome, usuario, senha, email, telefone, role) VALUES (?, ?, ?, ?, ?, ?, ?)";
-        db.query(sql, [user.id, user.nome, user.usuario, user.senha, user.email || null, user.telefone || null, user.role || "user"], (err, result) => {
+        const sql = "INSERT INTO usuario (nome, usuario, senha, email, telefone, role) VALUES (?, ?, ?, ?, ?, ?)";
+        db.query(sql, [user.nome, user.usuario, user.senha, user.email || null, user.telefone || null, user.role || "user"], (err, result) => {
             if (err) return reject(err);
-            resolve({ id: user.id, ...user });
+            // result.insertId contém o novo id autoincrement
+            resolve({ id: result.insertId, ...user });
         });
     });
 }

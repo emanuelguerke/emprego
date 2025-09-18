@@ -8,7 +8,9 @@ const router = express.Router();
 router.post("/", createUser);
 
 // Rotas protegidas por token
-router.get("/", verifyToken, getUsers);
+//pegar todos os usuarios desativada pois ainda não decidiram por administrador no protocolo
+//router.get("/", verifyToken, getUsers);
+
 router.get("/:id", verifyToken, getUser);
 // aceitar tanto PUT quanto PATCH para atualização
 router.put("/:id", verifyToken, updateUser);

@@ -125,7 +125,7 @@ export default function Profile() {
         <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
           <button
             type="button"
-            onClick={() => navigate("/dashboard")}
+            onClick={() => navigate("/home")}
             style={{
               background: "transparent",
               border: "none",

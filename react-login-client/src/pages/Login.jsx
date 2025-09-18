@@ -20,7 +20,7 @@ export default function Login() {
         throw new Error(res?.message || "Resposta inválida do servidor");
       }
       setToken(res.token);
-      navigate("/dashboard");
+      navigate("/home");
     } catch (err) {
       setError(err?.response?.data?.message || err.message || "Erro no login");
     } finally {

@@ -1,5 +1,5 @@
 import * as UserModel from "../model/userModel.js";
-import { v4 as uuidv4 } from "uuid";
+import * as AuthModel from "../model/authModel.js";
 
 // validações simples reutilizáveis
 function isValidEmail(email) {
@@ -117,11 +117,28 @@ export async function deleteUser(req, res) {
   try {
     if (!req.user) return res.status(401).json({ message: "invalid token" });
 
-    const id = req.params.id;
-    if (req.user.id !== id) return res.status(403).json({ message: "forbidden" });
+    
 
+    const id = req.params.id;
     const current = await UserModel.getUserById(id);
     if (!current) return res.status(404).json({ message: "user not found" });
+    
+    if (req.user.id !== id) return res.status(403).json({ message: "forbidden" });
+
+    
+
+    // revoke current token (if provided) and revoke all tokens for this user
+    try {
+      const auth = req.headers.authorization || "";
+      const parts = auth.split(" ");
+      const token = parts.length === 2 && parts[0] === "Bearer" ? parts[1] : null;
+      if (token) {
+        await AuthModel.revokeToken(token).catch(()=>{});
+      }
+      await AuthModel.revokeTokensByUser(id).catch(()=>{});
+    } catch(e) {
+      // ignore revocation errors but continue with deletion
+    }
 
     await UserModel.deleteUser(id);
     return res.status(200).json({ message: "User deleted successfully" });
@@ -129,6 +146,9 @@ export async function deleteUser(req, res) {
     res.status(500).json({ error: err.message });
   }
 }
+
+// (removida geração de UUID — agora o DB fornece o id autoincrement)
+// export async function createUser(req, res) { ... }  (substituído abaixo)
 
 export async function createUser(req, res) {
   try {
@@ -172,9 +192,8 @@ export async function createUser(req, res) {
       return res.status(404).json({ message: "validation erro", code: "UNPROCESSABLE", detail: errors });
     }
 
-    const id = uuidv4();
+    // prepare user — do NOT set id, DB will assign auto-increment id
     const user = {
-      id,
       nome: (payload.name || "").toString().trim().toUpperCase(),
       usuario: payload.username,
       senha: payload.password,
