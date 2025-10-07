@@ -9,7 +9,7 @@ export default function Profile() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "", experience: "", education: "" });
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState([]);
 
@@ -20,7 +20,14 @@ export default function Profile() {
         const res = await api.get(`/users/${id}`);
         if (mounted) {
           setProfile(res.data);
-          setForm({ name: res.data.name || "", email: res.data.email || "", phone: res.data.phone || "", password: "" });
+          setForm({
+            name: res.data.name || "",
+            email: res.data.email || "",
+            phone: res.data.phone || "",
+            password: "",
+            experience: res.data.experience || "",
+            education: res.data.education || "",
+          });
         }
       } catch (err) {
         const status = err?.response?.status;
@@ -56,6 +63,8 @@ export default function Profile() {
       if (form.email !== profile.email) payload.email = form.email;
       if (form.phone !== profile.phone) payload.phone = form.phone;
       if (form.password) payload.password = form.password;
+      if (form.experience !== profile.experience) payload.experience = form.experience;
+      if (form.education !== profile.education) payload.education = form.education;
 
       if (Object.keys(payload).length === 0) {
         setEditMode(false);
@@ -118,6 +127,7 @@ export default function Profile() {
     </div>
   );
 
+  // render quando não em edição: melhorar exibição / evitar overflow usando container rolável
   return (
     <div className="page-root">
       <div className="card" style={{ position: "relative", paddingTop: 20 }}>
@@ -174,6 +184,21 @@ export default function Profile() {
             <p><strong>Email:</strong> {profile.email || "-"}</p>
             <p><strong>Telefone:</strong> {profile.phone || "-"}</p>
 
+            {/* exibição segura para textos grandes: caixa com altura máxima e scroll interno */}
+            <div style={{ marginTop: 8 }}>
+              <div style={{ marginBottom: 6 }}><strong>Experiência:</strong></div>
+              <div style={{ maxHeight: 180, overflowY: "auto", padding: 8, border: "1px solid #eee", borderRadius: 6, whiteSpace: "pre-wrap", background: "#fafafa" }}>
+                {profile.experience ? profile.experience : "-"}
+              </div>
+            </div>
+
+            <div style={{ marginTop: 12 }}>
+              <div style={{ marginBottom: 6 }}><strong>Educação:</strong></div>
+              <div style={{ maxHeight: 180, overflowY: "auto", padding: 8, border: "1px solid #eee", borderRadius: 6, whiteSpace: "pre-wrap", background: "#fafafa" }}>
+                {profile.education ? profile.education : "-"}
+              </div>
+            </div>
+
             {error && <div className="error">{error}</div>}
 
             <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
@@ -206,9 +231,21 @@ export default function Profile() {
             </label>
 
             <label>
-              Nova Senha (opcional)
+              Nova Senha 
               <input name="password" type="password" value={form.password} onChange={handleChange} />
               {fieldErrors.find(f=>f.field==="password") && <div className="error">{fieldErrors.find(f=>f.field==="password").error}</div>}
+            </label>
+
+            <label>
+              Experiência 
+              <textarea name="experience" value={form.experience} onChange={handleChange} rows={4} maxLength={600} />
+              {fieldErrors.find(f=>f.field==="experience") && <div className="error">{fieldErrors.find(f=>f.field==="experience").error}</div>}
+            </label>
+
+            <label>
+              Formação
+              <textarea name="education" value={form.education} onChange={handleChange} rows={4} maxLength={600} />
+              {fieldErrors.find(f=>f.field==="education") && <div className="error">{fieldErrors.find(f=>f.field==="education").error}</div>}
             </label>
 
             {error && <div className="error">{error}</div>}

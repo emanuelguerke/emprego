@@ -33,8 +33,8 @@ export function getUserById(id) {
 // agora insertion sem fornecer id (DB autoincrement)
 export function createUser(user) {
     return new Promise((resolve, reject) => {
-        const sql = "INSERT INTO usuario (nome, usuario, senha, email, telefone, role) VALUES (?, ?, ?, ?, ?, ?)";
-        db.query(sql, [user.nome, user.usuario, user.senha, user.email || null, user.telefone || null, user.role || "user"], (err, result) => {
+        const sql = "INSERT INTO usuario (nome, usuario, senha, email, telefone, role, experience, education) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        db.query(sql, [user.nome, user.usuario, user.senha, user.email || null, user.telefone || null, user.role || "user", user.experience || null, user.education || null], (err, result) => {
             if (err) return reject(err);
             // result.insertId contém o novo id autoincrement
             resolve({ id: result.insertId, ...user });
@@ -44,8 +44,8 @@ export function createUser(user) {
 
 export function updateUser(id, user) {
     return new Promise((resolve, reject) => {
-        const sql = "UPDATE usuario SET nome = ?, usuario = ?, senha = ?, email = ?, telefone = ?, role = ? WHERE id = ?";
-        db.query(sql, [user.nome, user.usuario, user.senha, user.email || null, user.telefone || null, user.role || "user", id], (err, result) => {
+        const sql = "UPDATE usuario SET nome = ?, usuario = ?, senha = ?, email = ?, telefone = ?, role = ?, experience = ?, education = ? WHERE id = ?";
+        db.query(sql, [user.nome, user.usuario, user.senha, user.email || null, user.telefone || null, user.role || "user", user.experience || null, user.education || null, id], (err, result) => {
             if (err) return reject(err);
             resolve(result);
         });

@@ -9,36 +9,29 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [experience, setExperience] = useState("");
+  const [education, setEducation] = useState("");
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState([]);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  function clientValidate() {
-    const errs = [];
-    return errs;
-  }
-
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
     setFieldErrors([]);
-    const errs = clientValidate();
-    if (errs.length) {
-      setFieldErrors(errs);
-      return;
-    }
 
     setLoading(true);
     try {
-      // payload property names match backend: name, username, password, email, phone
-      await register({ name, username, password, email, phone });
+      
+      await register({ name, username, password, email, phone, experience, education });
       alert("Conta criada com sucesso. Faça login.");
       navigate("/");
     } catch (err) {
       const data = err?.response?.data;
-      if (data?.code === "UNPROCESSABLE" && Array.isArray(data.detail)) {
-        setFieldErrors(data.detail);
+    
+      if (data?.code === "UNPROCESSABLE" && Array.isArray(data.details)) {
+        setFieldErrors(data.details);
       } else if (err?.response?.status === 409) {
         // username conflict
         setError(data?.message || "username already exists");
@@ -83,6 +76,19 @@ export default function Register() {
             Telefone (opcional)
             <input type="text" value={phone} onChange={(e) => setPhone(e.target.value)} />
             {fieldErrors.find(f=>f.field==="phone") && <div className="error">{fieldErrors.find(f=>f.field==="phone").error}</div>}
+          </label>
+
+          {}
+          <label>
+            Experiência (opcional)
+            <textarea value={experience} onChange={(e) => setExperience(e.target.value)} maxLength={600} rows={4} />
+            {fieldErrors.find(f=>f.field==="experience") && <div className="error">{fieldErrors.find(f=>f.field==="experience").error}</div>}
+          </label>
+
+          <label>
+            Educação (opcional)
+            <textarea value={education} onChange={(e) => setEducation(e.target.value)} maxLength={600} rows={4} />
+            {fieldErrors.find(f=>f.field==="education") && <div className="error">{fieldErrors.find(f=>f.field==="education").error}</div>}
           </label>
 
           {error && <div className="error">{error}</div>}

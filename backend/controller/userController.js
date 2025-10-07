@@ -16,6 +16,12 @@ function isValidName(name) {
 function isValidPassword(pw) {
   return /^[A-Za-z0-9]{3,20}$/.test(String(pw));
 }
+function isValidLongString(s) {
+  if (s === undefined || s === null) return true;
+  const str = String(s).trim();
+  if (str === "") return true; // optional
+  return str.length >= 50 && str.length <= 600;
+}
 
 // GET /users -> (mantém existente) ...
 export async function getUsers(req, res) {
@@ -45,6 +51,8 @@ export async function getUser(req, res) {
       username: user.usuario || "",
       email: user.email || "",
       phone: user.telefone || "",
+      experience: user.experience || "",
+      education: user.education || "",
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -83,6 +91,12 @@ export async function updateUser(req, res) {
     if (payload.password !== undefined && payload.password !== "" && !isValidPassword(payload.password)) {
       errors.push({ field: "password", error: "invalid_format" });
     }
+    if (payload.experience !== undefined && payload.experience !== "" && !isValidLongString(payload.experience)) {
+      errors.push({ field: "experience", error: "invalid_format" });
+    }
+    if (payload.education !== undefined && payload.education !== "" && !isValidLongString(payload.education)) {
+      errors.push({ field: "education", error: "invalid_format" });
+    }
 
     if (errors.length) {
       return res.status(422).json({
@@ -103,6 +117,8 @@ export async function updateUser(req, res) {
       email: payload.email !== undefined ? (payload.email || null) : current.email,
       telefone: payload.phone !== undefined ? (payload.phone || null) : current.telefone,
       role: current.role || "user",
+      experience: payload.experience !== undefined ? (payload.experience || null) : current.experience,
+      education: payload.education !== undefined ? (payload.education || null) : current.education,
     };
 
     await UserModel.updateUser(id, toSave);
@@ -180,6 +196,16 @@ export async function createUser(req, res) {
       if (!isValidPhone(payload.phone)) errors.push({ field: "phone", error: "invalid_format" });
     }
 
+    // experience optional, if present validate 50-600 chars
+    if (payload.experience !== undefined && payload.experience !== null && payload.experience !== "") {
+      if (!isValidLongString(payload.experience)) errors.push({ field: "experience", error: "invalid_format" });
+    }
+
+    // education optional, if present validate 50-600 chars
+    if (payload.education !== undefined && payload.education !== null && payload.education !== "") {
+      if (!isValidLongString(payload.education)) errors.push({ field: "education", error: "invalid_format" });
+    }
+
     // username uniqueness -> 409 if exists
     if (payload.username) {
       const existing = await UserModel.getUserByUsuario(payload.username);
@@ -189,9 +215,9 @@ export async function createUser(req, res) {
     }
 
     if (errors.length) {
-      return res.status(404).json({ message: "validation erro", code: "UNPROCESSABLE", detail: errors });
+      return res.status(422).json({ message: "validation erro", code: "UNPROCESSABLE", details: errors });
     }
-
+    
     // prepare user — do NOT set id, DB will assign auto-increment id
     const user = {
       nome: (payload.name || "").toString().trim().toUpperCase(),
@@ -200,6 +226,8 @@ export async function createUser(req, res) {
       email: payload.email || null,
       telefone: payload.phone || null,
       role: "user",
+      experience: payload.experience || null,
+      education: payload.education || null,
     };
 
     await UserModel.createUser(user);
