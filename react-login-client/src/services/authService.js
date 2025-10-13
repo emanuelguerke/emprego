@@ -12,7 +12,8 @@ function getStoredBase() {
 
 const api = axios.create({
   baseURL: getStoredBase(),
-  headers: { "Content-Type": "application/json" },
+  headers: { "Content-Type": "application/json" }
+  //withCredentials: true
 });
 
 api.interceptors.request.use((config) => {

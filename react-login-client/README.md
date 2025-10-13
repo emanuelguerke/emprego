@@ -1,8 +1,8 @@
-# React Login Client
+# Login react primeira entrega
 
-This project is a simple React application that provides a login interface and a dashboard for authenticated users. It consumes a login API from a backend server.
+Projeto da disciplina de cliente servidor utfpr pg 2025/02, essa primeira parte é a interface do login para autenticar usuarios consumindo a API RESTFUL do backend servidor. 
 
-## Project Structure
+## Estrutura padrão tentando seguir o padrão do react
 
 ```
 react-login-client
@@ -13,9 +13,14 @@ react-login-client
 │   ├── App.jsx             # Main App component with routing
 │   ├── pages
 │   │   ├── Login.jsx       # Login page component
-│   │   └── Dashboard.jsx    # Dashboard page component
+│   │   └── Profile.jsx     # perfil page component
+|   |   └── Register.jsx    # cadadastro page component
+|   |   └── Setup.jsx       # configuração page component
+|   |   └── Home.jsx        # Pagina inicial component
+|   |
 │   ├── components
-│   │   └── LoginForm.jsx    # Login form component
+│   │   └── LoginForm.jsx       # Login form component
+│   │   └── ProtectedRoute.jsx  # Route component
 │   ├── services
 │   │   └── authService.js   # Service for API calls related to authentication
 │   ├── hooks
@@ -28,39 +33,31 @@ react-login-client
 └── README.md                # Project documentation
 ```
 
-## Setup Instructions
+## Instruções de instação
 
-1. **Clone the repository:**
+1. **Clone o repositório do git:**
    ```
    git clone <repository-url>
    cd react-login-client
    ```
+   **
+   **
 
-2. **Install dependencies:**
+2. **Instale as dependencias:**
    ```
    npm install
    ```
 
-3. **Run the application:**
+3. **Comando para iniciar a aplicação:**
    ```
    npm run dev
    ```
 
-4. **Open your browser and navigate to:**
+4. **Abra o navegador em localhost ou no ip configurado no .env que ainda vai ser criado pra proxima parte do projeto:**
    ```
    http://localhost:3000
+   **
+   http://ip:porta
+
    ```
 
-## Usage
-
-- Navigate to the login page to enter your credentials.
-- Upon successful login, you will be redirected to the dashboard.
-- The dashboard can display user-specific information.
-
-## API Integration
-
-This application communicates with a backend server for authentication. Ensure that the backend is running and accessible at the specified endpoint for the login API.
-
-## License
-
-This project is licensed under the MIT License.

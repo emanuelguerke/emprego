@@ -7,7 +7,8 @@ function isValidEmail(email) {
   return re.test(String(email).toLowerCase());
 }
 function isValidPhone(phone) {
-  return /^\d{10,14}$/.test(String(phone));
+  const digitsOnly = phone.replace(/\D/g, ''); // remove tudo que não é número
+  return /^\d{10,14}$/.test(digitsOnly);
 }
 function isValidName(name) {
   const s = (name || "").toString().trim();
