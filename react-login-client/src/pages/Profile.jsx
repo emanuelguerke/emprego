@@ -58,20 +58,18 @@ export default function Profile() {
     setError("");
     setFieldErrors([]);
     try {
-      const payload = {};
-      if (form.name !== profile.name) payload.name = form.name;
-      if (form.email !== profile.email) payload.email = form.email;
-      if (form.phone !== profile.phone) payload.phone = form.phone;
-      if (form.password) payload.password = form.password;
-      if (form.experience !== profile.experience) payload.experience = form.experience;
-      if (form.education !== profile.education) payload.education = form.education;
-
-      if (Object.keys(payload).length === 0) {
-        setEditMode(false);
-        return;
-      }
+      // enviar todos os campos, mesmo que vazios
+      const payload = {
+        name: form.name,
+        email: form.email,
+        phone: form.phone,
+        password: form.password, // pode ser ""
+        experience: form.experience,
+        education: form.education,
+      };
 
       await api.patch(`/users/${id}`, payload);
+
       const res = await api.get(`/users/${id}`);
       setProfile(res.data);
       setEditMode(false);
@@ -88,6 +86,8 @@ export default function Profile() {
       } else if (status === 422) {
         const data = err.response.data;
         setFieldErrors(data?.details || []);
+      } else if (status === 400) {
+        setError(err?.response?.data?.message || "Bad request");
       } else {
         setError("Erro ao atualizar");
       }

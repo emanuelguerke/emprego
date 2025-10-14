@@ -7,7 +7,7 @@ export default function Setup() {
   const navigate = useNavigate();
   const location = useLocation();
   const [host, setHost] = useState("localhost");
-  const [port, setPort] = useState("8080");
+  const [port, setPort] = useState("21000");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -19,7 +19,7 @@ export default function Setup() {
         navigate("/login", { replace: true });
       }
     } catch {
-      // ignore
+     
     }
   }, [navigate, location.pathname]);
 
@@ -34,7 +34,7 @@ export default function Setup() {
   }
 
   function handleDefault() {
-    const base = buildBase("localhost", "8080");
+    const base = buildBase("localhost", "21000");
     setApiBase(base);
     navigate("/login");
   }
@@ -61,12 +61,12 @@ export default function Setup() {
         <h2>Configurar API</h2>
         <form onSubmit={handleSubmit}>
           <label>
-            Host (ex: localhost ou http://api.meuhost.com)
+            Host (ex: localhost ou 192.2.1.3)
             <input value={host} onChange={(e)=>setHost(e.target.value)} />
           </label>
 
           <label>
-            Porta (ex: 8080)
+            Porta (ex: 21000)
             <input value={port} onChange={(e)=>setPort(e.target.value)} />
           </label>
 

@@ -42,7 +42,6 @@ export function revokeTokensByUser(id_usuario) {
                 if (username) {
                   removeActiveTokensByUsername(username);
                 } else {
-                  // fallback: tentar remover por id pattern (não ideal) — aqui só limpa matching tokens containing id
                  
                 }
                 printActiveTokens();

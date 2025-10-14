@@ -63,6 +63,14 @@ export async function getUser(req, res) {
 // PATCH /users/:id -> atualiza (apenas próprio usuário). username não pode ser alterado.
 export async function updateUser(req, res) {
   try {
+    // require JSON content-type
+    if (!req.is || !req.is("application/json")) {
+      return res.status(400).json({ message: "request must be application/json" });
+    }
+    if (typeof req.body !== "object" || Array.isArray(req.body) || req.body === null) {
+      return res.status(400).json({ message: "request body must be a JSON object" });
+    }
+
     if (!req.user) return res.status(401).json({ message: "invalid token" });
 
     const id = req.params.id;
