@@ -3,14 +3,15 @@ import userRoute from "./route/userRoute.js";
 import authRoute from "./route/authRoute.js";
 import cors from "cors";
 import readline from "readline";
+import * as AuthModel from "./model/authModel.js"; // tive que colocar aqui por causa do token mas acredito que não seria a melhor forma
 
 const app = express();
-const port = 8080;
+const DEFAULT_PORT = 21000;
 
 app.use(express.json());
 app.use(cors());
 
-// middleware de logging: imprime cada requisição recebida
+// middleware de log: imprime cada requisição recebida
 app.use((req, res, next) => {
   try {
     const time = new Date().toISOString();
@@ -18,10 +19,10 @@ app.use((req, res, next) => {
     const method = req.method;
     const url = req.originalUrl || req.url;
 
-    // mask Authorization token for safety (keeps the scheme)
+    // MASCARA PARA CENSURAR O TOKEN CASO PRECISE DE SEGURAÇA MAIOR
     const headers = { ...req.headers };
     if (headers.authorization && typeof headers.authorization === "string") {
-      //headers.authorization = headers.authorization.replace(/Bearer\s+(.+)/i, "Bearer [REDACTED]");
+      //headers.authorization = headers.authorization.replace(/Bearer\s+(.+)/i, "Bearer [CENSURADO]");
     }
 
     console.log("------------------------------------------------------------");
@@ -36,13 +37,36 @@ app.use((req, res, next) => {
   next();
 });
 
+// middleware para logar responses (status + body)
+app.use((req, res, next) => {
+  const oldSend = res.send.bind(res);
+  res.send = function (body) {
+    try {
+      console.log(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Resposta >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+      console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl} -> ${res.statusCode}`);
+      console.log("Response body:", body);
+      console.log(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+    } catch (e) {
+      // erros ao logar respostta colocar depois
+      console.log("Erro no logger de respostas:", e);
+    }
+    return oldSend(body);
+  };
+  next();
+});
+
 // Monta as rotas de auth na raiz -> /login e /logout
 app.use("/", authRoute);
 
-// Montar /users sem proteção aqui — proteção é aplicada por rota no userRoute
+// Monta /users sem proteção aqui — proteção é aplicada por rota no userRoute
 app.use("/users", userRoute);
 
-// ler a entrada do console para IP do servidor
+// inicializar lista de tokens ativos a partir do DB e só então iniciar prompt + server
+AuthModel.initActiveTokens().catch((err) => {
+  console.error("Falha ao inicializar tokens ativos (continuando):", err?.message || err);
+});
+
+// ler a entrada do console para IP do servidor e porta
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
@@ -50,14 +74,21 @@ const rl = readline.createInterface({
 
 rl.question("Digite o endereço de IP (padrão: localhost): ", (ip) => {
   const serverIp = ip || "localhost";
-  rl.close();
+  rl.question(`Digite a porta (padrão: ${DEFAULT_PORT}): `, (portStr) => {
+    const port = parseInt(portStr, 10) || DEFAULT_PORT;
+    rl.close();
 
-  app.listen(port, serverIp, (error) => {
-    if (error) {
-      console.log(`Erro ao iniciar o servidor: ${error}`);
-      return;
-    }
+    app.listen(port, serverIp, (error) => {
+      if (error) {
+        console.log(`Erro ao iniciar o servidor: ${error}`);
+        return;
+      }
 
-    console.log(`Servidor rodando em http://${serverIp}:${port}`);
+      console.log(`Servidor rodando em http://${serverIp}:${port}`);
+      // exibir a lista inicial de tokens ativos
+      try {
+        AuthModel.printActiveTokens();
+      } catch (e) {}
+    });
   });
 });
