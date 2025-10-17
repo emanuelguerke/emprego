@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const DEFAULT_BASE = "http://localhost:8080";
+const DEFAULT_BASE = "http://localhost:21000";
 
 function getStoredBase() {
   try {

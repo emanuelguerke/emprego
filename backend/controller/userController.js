@@ -21,7 +21,7 @@ function isValidLongString(s) {
   if (s === undefined || s === null) return true;
   const str = String(s).trim();
   if (str === "") return true; // optional
-  return str.length >= 50 && str.length <= 600;
+  return str.length >= 10 && str.length <= 600;
 }
 
 // GET /users -> (mantém existente) ...
@@ -205,12 +205,12 @@ export async function createUser(req, res) {
       if (!isValidPhone(payload.phone)) errors.push({ field: "phone", error: "invalid_format" });
     }
 
-    // experience optional, if present validate 50-600 chars
+    // experience optional, if present validate 10-600 chars
     if (payload.experience !== undefined && payload.experience !== null && payload.experience !== "") {
       if (!isValidLongString(payload.experience)) errors.push({ field: "experience", error: "invalid_format" });
     }
 
-    // education optional, if present validate 50-600 chars
+    // education optional, if present validate 10-600 chars
     if (payload.education !== undefined && payload.education !== null && payload.education !== "") {
       if (!isValidLongString(payload.education)) errors.push({ field: "education", error: "invalid_format" });
     }
