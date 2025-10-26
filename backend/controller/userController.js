@@ -37,138 +37,101 @@ export async function getUsers(req, res) {
 // GET /users/:id -> retorna apenas o próprio usuário (ownership)
 export async function getUser(req, res) {
   try {
-    // middleware de autenticação deve preencher req.user
     if (!req.user) return res.status(401).json({ message: "invalid token" });
 
-    const id = req.params.id;
-    // ownership check: só pode ver próprio perfil
-    if (req.user.id !== id) return res.status(403).json({ message: "forbidden" });
+    const idParam = Number(req.params.id);
+    if (!Number.isInteger(idParam) || idParam <= 0) return res.status(404).json({ message: "user not found" });
 
-    const user = await UserModel.getUserById(id);
+    // ownership guard: only the same user with role 'user' can read
+    if (req.user.role !== "user" || req.user.id !== idParam) {
+      return res.status(403).json({ message: "forbidden" });
+    }
+
+    const user = await UserModel.getUserById(idParam);
     if (!user) return res.status(404).json({ message: "user not found" });
 
     return res.status(200).json({
-      name: user.nome || "",
-      username: user.usuario || "",
-      email: user.email || "",
-      phone: user.telefone || "",
-      experience: user.experience || "",
-      education: user.education || "",
+      name: user.nome,
+      username: user.usuario,
+      email: user.email,
+      phone: user.telefone,
+      experience: user.experience || null,
+      education: user.education || null
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 }
 
-// PATCH /users/:id -> atualiza (apenas próprio usuário). username não pode ser alterado.
 export async function updateUser(req, res) {
   try {
-    // require JSON content-type
-    if (!req.is || !req.is("application/json")) {
-      return res.status(400).json({ message: "request must be application/json" });
-    }
-    if (typeof req.body !== "object" || Array.isArray(req.body) || req.body === null) {
-      return res.status(400).json({ message: "request body must be a JSON object" });
-    }
-
     if (!req.user) return res.status(401).json({ message: "invalid token" });
 
-    const id = req.params.id;
-    if (req.user.id !== id) return res.status(403).json({ message: "forbidden" });
+    const idParam = Number(req.params.id);
+    if (!Number.isInteger(idParam) || idParam <= 0) return res.status(404).json({ message: "user not found" });
+
+    if (req.user.role !== "user" || req.user.id !== idParam) {
+      return res.status(403).json({ message: "forbidden" });
+    }
 
     const payload = req.body || {};
-    // username must not be changed
+    // username immutable
     if (payload.username !== undefined && payload.username !== null && payload.username !== "") {
-      // reject any attempt to change username
-      return res.status(422).json({
-        message: "Validation error",
-        code: "UNPROCESSABLE",
-        details: [{ field: "username", error: "immutable" }],
-      });
+      return res.status(422).json({ message: "Validation error", code: "UNPROCESSABLE", details: [{ field: "username", error: "immutable" }] });
     }
 
     const errors = [];
-    if (payload.name !== undefined && !isValidName(payload.name)) {
-      errors.push({ field: "name", error: "invalid_format" });
-    }
-    if (payload.email !== undefined && payload.email !== "" && !isValidEmail(payload.email)) {
-      errors.push({ field: "email", error: "invalid_format" });
-    }
-    if (payload.phone !== undefined && payload.phone !== "" && !isValidPhone(payload.phone)) {
-      errors.push({ field: "phone", error: "invalid_format" });
-    }
-    if (payload.password !== undefined && payload.password !== "" && !isValidPassword(payload.password)) {
-      errors.push({ field: "password", error: "invalid_format" });
-    }
-    if (payload.experience !== undefined && payload.experience !== "" && !isValidLongString(payload.experience)) {
-      errors.push({ field: "experience", error: "invalid_format" });
-    }
-    if (payload.education !== undefined && payload.education !== "" && !isValidLongString(payload.education)) {
-      errors.push({ field: "education", error: "invalid_format" });
-    }
+    if (payload.name !== undefined && !isValidName(payload.name)) errors.push({ field: "name", error: "invalid_format" });
+    if (payload.password !== undefined && payload.password !== "" && !isValidPassword(payload.password)) errors.push({ field: "password", error: "invalid_format" });
+    if (payload.email !== undefined && payload.email !== "" && !isValidEmail(payload.email)) errors.push({ field: "email", error: "invalid_format" });
+    if (payload.phone !== undefined && payload.phone !== "" && !isValidPhone(payload.phone)) errors.push({ field: "phone", error: "invalid_format" });
+    if (payload.experience !== undefined && payload.experience !== "" && !isValidLongString(payload.experience)) errors.push({ field: "experience", error: "invalid_format" });
+    if (payload.education !== undefined && payload.education !== "" && !isValidLongString(payload.education)) errors.push({ field: "education", error: "invalid_format" });
 
     if (errors.length) {
-      return res.status(422).json({
-        message: "Validation error",
-        code: "UNPROCESSABLE",
-        details: errors,
-      });
+      return res.status(422).json({ message: "Validation error", code: "UNPROCESSABLE", details: errors });
     }
 
-    const current = await UserModel.getUserById(id);
+    const current = await UserModel.getUserById(idParam);
     if (!current) return res.status(404).json({ message: "user not found" });
 
-    // prepare fields (preserve existing where not provided)
     const toSave = {
-      nome: payload.name !== undefined ? payload.name.toString().trim().toUpperCase() : current.nome,
-      usuario: current.usuario, // username cannot change
+      nome: payload.name !== undefined ? payload.name.trim() : current.nome,
+      usuario: current.usuario, // never change
       senha: payload.password !== undefined && payload.password !== "" ? payload.password : current.senha,
-      email: payload.email !== undefined ? (payload.email || null) : current.email,
-      telefone: payload.phone !== undefined ? (payload.phone || null) : current.telefone,
+      email: payload.email !== undefined ? (payload.email.trim() || null) : current.email,
+      telefone: payload.phone !== undefined ? payload.phone : current.telefone,
+      experience: payload.experience !== undefined ? payload.experience : current.experience,
+      education: payload.education !== undefined ? payload.education : current.education,
       role: current.role || "user",
-      experience: payload.experience !== undefined ? (payload.experience || null) : current.experience,
-      education: payload.education !== undefined ? (payload.education || null) : current.education,
     };
 
-    await UserModel.updateUser(id, toSave);
-    return res.status(200).json({ message: "sucess" });
+    await UserModel.updateUser(idParam, toSave);
+    return res.status(200).json({ message: "updated" });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 }
 
-// DELETE /users/:id -> apenas próprio usuário
 export async function deleteUser(req, res) {
   try {
     if (!req.user) return res.status(401).json({ message: "invalid token" });
 
-    
+    const idParam = Number(req.params.id);
+    if (!Number.isInteger(idParam) || idParam <= 0) return res.status(404).json({ message: "user not found" });
 
-    const id = req.params.id;
-    const current = await UserModel.getUserById(id);
-    if (!current) return res.status(404).json({ message: "user not found" });
-    
-    if (req.user.id !== id) return res.status(403).json({ message: "forbidden" });
-
-    
-
-    // revoke current token (if provided) and revoke all tokens for this user
-    try {
-      const auth = req.headers.authorization || "";
-      const parts = auth.split(" ");
-      const token = parts.length === 2 && parts[0] === "Bearer" ? parts[1] : null;
-      if (token) {
-        await AuthModel.revokeToken(token).catch(()=>{});
-      }
-      await AuthModel.revokeTokensByUser(id).catch(()=>{});
-    } catch(e) {
-      // ignore revocation errors but continue with deletion
+    if (req.user.role !== "user" || req.user.id !== idParam) {
+      return res.status(403).json({ message: "forbidden" });
     }
 
-    await UserModel.deleteUser(id);
+    const current = await UserModel.getUserById(idParam);
+    if (!current) return res.status(404).json({ message: "user not found" });
+
+    // revoke tokens for this user (if needed) handled elsewhere
+    await UserModel.deleteUser(idParam);
     return res.status(200).json({ message: "User deleted successfully" });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 }
 

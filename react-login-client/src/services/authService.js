@@ -32,6 +32,11 @@ export async function register(payload) {
   return res.data;
 }
 
+export async function registerCompany(payload) {
+  const res = await api.post("/companies", payload);
+  return res.data;
+}
+
 export function setToken(token) {
   if (token) localStorage.setItem("token", token);
   else localStorage.removeItem("token");

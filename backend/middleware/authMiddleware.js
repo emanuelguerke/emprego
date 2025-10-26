@@ -1,69 +1,64 @@
 import jwt from "jsonwebtoken";
 import * as AuthModel from "../model/authModel.js";
 
-const JWT_SECRET = process.env.JWT_SECRET || "UTFPR"; //MUDAR ISSO DEPOIS PRO QUE FOR DECIDIDO NO PROTOCOLO
+const JWT_SECRET = process.env.JWT_SECRET || "UTFPR"; // keep until env configured
 
 export async function verifyToken(req, res, next) {
   try {
     const auth = req.headers.authorization || "";
     const parts = auth.split(" ");
-    if (parts.length !== 2 || parts[0] !== "Bearer") {
-      return res.status(401).json({ message: "token ausente ou formato inválido" });
-    }
-    const token = parts[1];
+    const token = parts.length === 2 && parts[0] === "Bearer" ? parts[1] : null;
+    if (!token) return res.status(401).json({ message: "invalid token" });
 
-    let decoded;
+    // verify signature and expiration
+    let payload;
     try {
-      decoded = jwt.verify(token, JWT_SECRET, { algorithms: ["HS256"] });
-    } catch (err) {
-      return res.status(401).json({ message: "token inválido ou expirado" });
+      payload = jwt.verify(token, JWT_SECRET, { algorithms: ["HS256"] });
+    } catch (e) {
+      return res.status(401).json({ message: "invalid token" });
     }
 
-    // decoded must have sub, username, role
-    if (!decoded.sub || !decoded.username || !decoded.role) {
-      return res.status(401).json({ message: "token inválido" });
+    // ensure payload has required fields
+    if (!payload || typeof payload !== "object" || !payload.sub || !payload.role) {
+      return res.status(401).json({ message: "invalid token" });
     }
 
-    // check blacklist / revocation and DB expiration
-    try {
-      const record = await AuthModel.getTokenRecord(token);
-      if (!record) {
-        // token not found in store -> considered invalid (you can change policy if needed)
-        return res.status(401).json({ message: "token inválido" });
-      }
-      if (record.revogado) {
-        return res.status(401).json({ message: "token revogado" });
-      }
-      if (record.expiraem && new Date(record.expiraem) < new Date()) {
-        return res.status(401).json({ message: "token expirado" });
-      }
-    } catch (err) {
-      // DB error -> deny access
-      return res.status(401).json({ message: "falha na validação do token" });
+    // sub must be numeric (id). Reject otherwise.
+    const subNum = Number(payload.sub);
+    if (!Number.isInteger(subNum) || subNum <= 0) {
+      return res.status(401).json({ message: "invalid token" });
     }
 
-    // attach user info to request
+    // check token exists in DB and not revoked
+    const record = await AuthModel.getTokenRecord(token);
+    if (!record || record.revogado) {
+      return res.status(401).json({ message: "invalid token" });
+    }
+
+    // attach normalized user info to req.user
     req.user = {
-      id: decoded.sub,
-      username: decoded.username,
-      role: decoded.role,
-      exp: decoded.exp,
-      rawToken: token,
+      id: subNum,
+      role: String(payload.role),
+      username: payload.username || null,
+      token,
     };
 
-    next();
+    return next();
   } catch (err) {
-    return res.status(401).json({ message: "autenticação falhou" });
+    return res.status(500).json({ error: err.message });
   }
 }
 
-// helper to check roles (array or single)
+/**
+ * requireRole(roles)
+ * roles: string or array of strings
+ * usage: app.get("/x", verifyToken, requireRole("company"), handler)
+ */
 export function requireRole(roles) {
+  const allowed = Array.isArray(roles) ? roles : [roles];
   return (req, res, next) => {
-    const r = Array.isArray(roles) ? roles : [roles];
-    if (!req.user || !r.includes(req.user.role)) {
-      return res.status(403).json({ message: "ação não permitida para este role" });
-    }
+    if (!req.user) return res.status(401).json({ message: "invalid token" });
+    if (!allowed.includes(req.user.role)) return res.status(403).json({ message: "forbidden" });
     next();
   };
 }

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { login, setToken } from "../services/authService";
+import { login, setToken, decodeToken } from "../services/authService";
 import "../styles/app.css";
 
 export default function Login() {
@@ -20,7 +20,12 @@ export default function Login() {
         throw new Error(res?.message || "Resposta inválida do servidor");
       }
       setToken(res.token);
-      navigate("/home");
+      const payload = decodeToken(); // use decodeToken from authService (import if needed)
+      if (payload?.role === "company") {
+        navigate("/company");
+      } else {
+        navigate("/home");
+      }
     } catch (err) {
       setError(err?.response?.data?.message || err.message || "Erro no login");
     } finally {

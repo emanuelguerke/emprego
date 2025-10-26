@@ -1,35 +1,43 @@
 import jwt from "jsonwebtoken";
 import * as UserModel from "../model/userModel.js";
+import * as CompanyModel from "../model/companyModel.js";
 import * as AuthModel from "../model/authModel.js";
 
-const JWT_SECRET = process.env.JWT_SECRET || "UTFPR"; // trocar em produção
+const JWT_SECRET = process.env.JWT_SECRET || "UTFPR";
 const DEFAULT_EXPIRES_SECONDS = 60 * 60 * 24; // 24h
 
 export async function login(req, res) {
   try {
     const { username, password } = req.body || {};
     if (!username || !password) {
-      return res.status(400).json({ message: "username e password obrigatórios" });
+      return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    const user = await UserModel.getUserByUsuario(username);
-    if (!user) {
-      return res.status(401).json({ message: "credenciais inválidas" });
+    // try user first
+    let actor = await UserModel.getUserByUsuario(username);
+    let actorType = "user";
+    // if not found as user, try company
+    if (!actor) {
+      actor = await CompanyModel.getCompanyByUsername(username);
+      actorType = actor ? "company" : actorType;
     }
 
-    // ATENÇÃO: se usar bcrypt, troque por bcrypt.compare
-    if (user.senha !== password) {
-      return res.status(401).json({ message: "credenciais inválidas" });
+    if (!actor) {
+      return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    // sub como string para compatibilidade
+    // check password field name differences
+    const storedPassword = actor.senha ?? actor.password ?? null;
+    if (!storedPassword || storedPassword !== password) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
     const payload = {
-      sub: String(user.id),
-      username: user.usuario,
-      role: user.role || "user",
+      sub: String(actor.id),
+      username: actor.usuario ?? actor.username,
+      role: actor.role || (actorType === "company" ? "company" : "user"),
     };
 
-    // evita envio de iat com noTimestamp, exp será adicionado pelo expiresIn
     const token = jwt.sign(payload, JWT_SECRET, {
       algorithm: "HS256",
       expiresIn: DEFAULT_EXPIRES_SECONDS,
@@ -39,8 +47,8 @@ export async function login(req, res) {
     const expires_in = Math.floor(Date.now() / 1000) + DEFAULT_EXPIRES_SECONDS;
     const expiraemDate = new Date(expires_in * 1000);
 
-    // persistir token para revogação
-    await AuthModel.createToken(user.id, token, expiraemDate);
+    // persist token for revocation — envia também role para indexação correta
+    await AuthModel.createToken(actor.id, token, expiraemDate, payload.role);
 
     return res.status(200).json({ token, expires_in });
   } catch (err) {
@@ -55,7 +63,6 @@ export async function logout(req, res) {
     const token = parts.length === 2 && parts[0] === "Bearer" ? parts[1] : null;
     if (!token) return res.status(401).json({ message: "Invalid token" });
 
-    // verifica se o token existe e não está revogado
     const record = await AuthModel.getTokenRecord(token);
     if (!record || record.revogado) {
       return res.status(401).json({ message: "Invalid token" });

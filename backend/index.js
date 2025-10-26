@@ -1,6 +1,7 @@
 import express from "express";
 import userRoute from "./route/userRoute.js";
 import authRoute from "./route/authRoute.js";
+import companyRoute from "./route/companyRoute.js";
 import cors from "cors";
 import readline from "readline";
 import * as AuthModel from "./model/authModel.js"; // tive que colocar aqui por causa do token mas acredito que não seria a melhor forma
@@ -58,7 +59,10 @@ app.use((req, res, next) => {
 // Monta as rotas de auth na raiz -> /login e /logout
 app.use("/", authRoute);
 
-// Monta /users sem proteção aqui — proteção é aplicada por rota no userRoute
+// montar companies (registro público e rotas protegidas)
+app.use("/companies", companyRoute);
+
+// montar users
 app.use("/users", userRoute);
 
 // inicializar lista de tokens ativos a partir do DB e só então iniciar prompt + server
