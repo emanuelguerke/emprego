@@ -51,12 +51,12 @@ export default function CompanyRegister() {
       <div className="card">
         <h2>Criar conta empresa</h2>
         <form onSubmit={handleSubmit}>
-          <label>Name
+          <label>Nome
             <input value={name} onChange={e=>setName(e.target.value)} required />
             {fieldError("name") && <div className="error">{fieldError("name")}</div>}
           </label>
 
-          <label>Business
+          <label>Ramo
             <input value={business} onChange={e=>setBusiness(e.target.value)} required />
             {fieldError("business") && <div className="error">{fieldError("business")}</div>}
           </label>
@@ -71,27 +71,27 @@ export default function CompanyRegister() {
             {fieldError("password") && <div className="error">{fieldError("password")}</div>}
           </label>
 
-          <label>Street
+          <label>Rua
             <input value={street} onChange={e=>setStreet(e.target.value)} required />
             {fieldError("street") && <div className="error">{fieldError("street")}</div>}
           </label>
 
-          <label>Number
+          <label>Numero
             <input value={number} onChange={e=>setNumber(e.target.value)} required />
             {fieldError("number") && <div className="error">{fieldError("number")}</div>}
           </label>
 
-          <label>City
+          <label>Cidade
             <input value={city} onChange={e=>setCity(e.target.value)} required />
             {fieldError("city") && <div className="error">{fieldError("city")}</div>}
           </label>
 
-          <label>State
+          <label>Estado
             <input value={stateField} onChange={e=>setStateField(e.target.value)} required />
             {fieldError("state") && <div className="error">{fieldError("state")}</div>}
           </label>
 
-          <label>Phone
+          <label>Telefone
             <input value={phone} onChange={e=>setPhone(e.target.value)} required />
             {fieldError("phone") && <div className="error">{fieldError("phone")}</div>}
           </label>

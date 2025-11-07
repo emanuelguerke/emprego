@@ -9,7 +9,15 @@ export function getCompanyByUsername(username) {
     });
   });
 }
-
+export function getUserByUsuario(usuario) {
+    return new Promise((resolve, reject) => {
+        const sql = "SELECT * FROM usuario WHERE usuario = ?";
+        db.query(sql, [usuario], (err, results) => {
+            if (err) return reject(err);
+            resolve(results[0]);
+        });
+    });
+}
 export function getCompanyByName(name) {
   return new Promise((resolve, reject) => {
     const sql = "SELECT * FROM companies WHERE name = ?";

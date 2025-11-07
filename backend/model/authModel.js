@@ -8,18 +8,43 @@ export function createToken(id_usuario, token, expiraem, role = "user") {
     db.query(sql, [id_usuario, token, expiraem], (err, result) => {
       if (err) return reject(err);
 
-      // lookup username based on role
-      const lookupSql = role === "company"
-        ? "SELECT username FROM companies WHERE id = ?"
-        : "SELECT usuario FROM usuario WHERE id = ?";
-      db.query(lookupSql, [id_usuario], (err2, rows) => {
-        const username = (!err2 && rows && rows[0])
-          ? (role === "company" ? rows[0].username : rows[0].usuario)
-          : null;
-        addActiveToken(username || null, token, role, id_usuario);
+      // Try to resolve username preferring the provided role but fallback to the other table if not found
+      const tryCompany = (cb) =>
+        db.query("SELECT username FROM companies WHERE id = ?", [id_usuario], (e, rows) => cb(e, rows && rows[0] ? rows[0].username : null));
+      const tryUser = (cb) =>
+        db.query("SELECT usuario FROM usuario WHERE id = ?", [id_usuario], (e, rows) => cb(e, rows && rows[0] ? rows[0].usuario : null));
+
+      const finalize = (usernameResolved, resolvedRole) => {
+        addActiveToken(usernameResolved || null, token, resolvedRole || role || "user", id_usuario);
         printActiveTokens();
-        resolve({ id: result.insertId, id_usuario, token, expiraem, username, role });
-      });
+        resolve({ id: result.insertId, id_usuario, token, expiraem, username: usernameResolved, role: resolvedRole || role });
+      };
+
+      if (role === "company") {
+        tryCompany((err2, uname) => {
+          if (err2) {
+            // fallback to user table
+            tryUser((err3, uname2) => {
+              finalize(uname2, uname ? "company" : "user");
+            });
+          } else if (uname) {
+            finalize(uname, "company");
+          } else {
+            tryUser((err3, uname2) => finalize(uname2, uname2 ? "user" : "company"));
+          }
+        });
+      } else {
+        // role === "user" or other: try user first, fallback to company
+        tryUser((err2, uname) => {
+          if (err2) {
+            tryCompany((err3, uname2) => finalize(uname2, uname2 ? "company" : "user"));
+          } else if (uname) {
+            finalize(uname, "user");
+          } else {
+            tryCompany((err3, uname2) => finalize(uname2, uname2 ? "company" : "user"));
+          }
+        });
+      }
     });
   });
 }
@@ -62,7 +87,8 @@ export function initActiveTokens() {
   return new Promise((resolve, reject) => {
     const sql = `
       SELECT t.token, t.id_usuario,
-             COALESCE(u.usuario, c.username) AS username,
+             -- prefer company username when present
+             COALESCE(c.username, u.usuario) AS username,
              CASE WHEN c.id IS NOT NULL THEN 'company' ELSE 'user' END AS role
       FROM token_usuarios t
       LEFT JOIN usuario u ON u.id = t.id_usuario

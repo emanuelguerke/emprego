@@ -1,5 +1,6 @@
 import * as UserModel from "../model/userModel.js";
 import * as AuthModel from "../model/authModel.js";
+//import * as CompanyModel from "../model/companyModel.js";
 
 // validações simples reutilizáveis
 function isValidEmail(email) {
@@ -181,7 +182,8 @@ export async function createUser(req, res) {
     // username uniqueness -> 409 if exists
     if (payload.username) {
       const existing = await UserModel.getUserByUsuario(payload.username);
-      if (existing) {
+      const existingCompanyUser = await UserModel.getCompanyByUsername(payload.username);
+      if (existing || existingCompanyUser) {
         return res.status(409).json({ message: "username already exists" });
       }
     }

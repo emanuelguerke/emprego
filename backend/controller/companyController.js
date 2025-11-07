@@ -26,6 +26,53 @@ function isValidNumberField(n) {
   return len >= 1 && len <= 8;
 }
 
+// normalize string: remove accents, lowercase, trim
+function normalizeStr(s) {
+  if (s === undefined || s === null) return "";
+  return String(s)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+// list of brazilian states (names without accents) + abbreviations
+const BRAZIL_STATES = [
+  "acre", "ac",
+  "alagoas", "al",
+  "amapa", "ap",
+  "amazonas", "am",
+  "bahia", "ba",
+  "ceara", "ce",
+  "distrito federal", "df",
+  "espirito santo", "es",
+  "goias", "go",
+  "maranhao", "ma",
+  "mato grosso", "mt",
+  "mato grosso do sul", "ms",
+  "minas gerais", "mg",
+  "para", "pa",
+  "paraiba", "pb",
+  "parana", "pr",
+  "pernambuco", "pe",
+  "piaui", "pi",
+  "rio de janeiro", "rj",
+  "rio grande do norte", "rn",
+  "rio grande do sul", "rs",
+  "rondonia", "ro",
+  "roraima", "rr",
+  "santa catarina", "sc",
+  "sao paulo", "sp",
+  "sergipe", "se",
+  "tocantins", "to"
+];
+
+function isValidBrazilState(s) {
+  const n = normalizeStr(s);
+  if (!n) return false;
+  return BRAZIL_STATES.includes(n);
+}
+
 export async function createCompany(req, res) {
   try {
     const payload = req.body || {};
@@ -38,7 +85,8 @@ export async function createCompany(req, res) {
     if (!isValidNameField(payload.street, 3, 150)) errors.push({ field: "street", error: "invalid_format" });
     if (!isValidNumberField(payload.number)) errors.push({ field: "number", error: "must_be_positive_int" });
     if (!isValidNameField(payload.city, 3, 150)) errors.push({ field: "city", error: "invalid_format" });
-    if (!isValidNameField(payload.state, 2, 150)) errors.push({ field: "state", error: "invalid_format" });
+    // state validation: must be a brazilian state name or abbreviation (accepts accents or not)
+    if (!isValidBrazilState(payload.state)) errors.push({ field: "state", error: "invalid_format" });
     if (!isValidPhone(payload.phone)) errors.push({ field: "phone", error: "invalid_format" });
     if (!isValidEmail(payload.email) || !isValidNameField(payload.email, 10, 150)) errors.push({ field: "email", error: "invalid_format" });
 
@@ -50,7 +98,10 @@ export async function createCompany(req, res) {
     const existingName = await CompanyModel.getCompanyByName(payload.name);
     if (existingName) return res.status(409).json({ message: "Company name already exists" });
 
-    const existingUser = await CompanyModel.getCompanyByUsername(payload.username);
+    const existingCompanyUser = await CompanyModel.getCompanyByUsername(payload.username);
+    if (existingCompanyUser) return res.status(409).json({ message: "Username already exists" });
+
+    const existingUser = await CompanyModel.getUserByUsuario(payload.username);
     if (existingUser) return res.status(409).json({ message: "Username already exists" });
 
     const company = {
@@ -68,7 +119,7 @@ export async function createCompany(req, res) {
     };
 
     await CompanyModel.createCompany(company);
-    return res.status(200).json({ message: "Created" });
+    return res.status(201).json({ message: "Created" });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
@@ -124,7 +175,8 @@ export async function updateCompany(req, res) {
     if (payload.street !== undefined && !isValidNameField(payload.street, 3, 150)) errors.push({ field: "street", error: "invalid_format" });
     if (payload.number !== undefined && !isValidNumberField(payload.number)) errors.push({ field: "number", error: "must_be_positive_int" });
     if (payload.city !== undefined && !isValidNameField(payload.city, 3, 150)) errors.push({ field: "city", error: "invalid_format" });
-    if (payload.state !== undefined && !isValidNameField(payload.state, 2, 150)) errors.push({ field: "state", error: "invalid_format" });
+    // state validation here as well
+    if (payload.state !== undefined && !isValidBrazilState(payload.state)) errors.push({ field: "state", error: "invalid_format" });
     if (payload.phone !== undefined && !isValidPhone(payload.phone)) errors.push({ field: "phone", error: "invalid_format" });
     if (payload.email !== undefined && (!isValidEmail(payload.email) || !isValidNameField(payload.email, 10, 150))) errors.push({ field: "email", error: "invalid_format" });
 
@@ -134,6 +186,17 @@ export async function updateCompany(req, res) {
 
     const current = await CompanyModel.getCompanyById(id);
     if (!current) return res.status(404).json({ message: "company not found" });
+
+    // ensure name remains unique: if changing name and another company has it -> conflict
+    if (payload.name !== undefined) {
+      const newName = String(payload.name).trim();
+      if (newName !== current.name) {
+        const existingName = await CompanyModel.getCompanyByName(newName);
+        if (existingName && String(existingName.id) !== String(id)) {
+          return res.status(409).json({ message: "Company name already exists" });
+        }
+      }
+    }
 
     const toSave = {
       name: payload.name !== undefined ? payload.name.trim() : current.name,
