@@ -7,6 +7,11 @@ import Setup from "./pages/Setup";
 import CompanyHome from "./pages/CompanyHome";
 import CompanyRegister from "./pages/CompanyRegister";
 import CompanyProfile from "./pages/CompanyProfile";
+import Jobs from "./pages/Jobs";
+import JobCompany from "./pages/JobCompany";
+import CompanyJobDetail from "./pages/CompanyJobDetail";
+import JobDetail from "./pages/JobDetail";
+import UserApplications from "./pages/UserApplications";
 import ProtectedRoute from "./components/ProtectedRoute";
 import "./styles/app.css";
 
@@ -19,6 +24,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/users" element={<Register />} />
         <Route path="/companies" element={<CompanyRegister />} />
+
         <Route
           path="/company"
           element={
@@ -35,6 +41,25 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        <Route
+          path="/company/jobs"
+          element={
+            <ProtectedRoute>
+              <JobCompany />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/company/jobs/:id"
+          element={
+            <ProtectedRoute>
+              <CompanyJobDetail />
+            </ProtectedRoute>
+          }
+        />
+
         <Route
           path="/home"
           element={
@@ -43,6 +68,33 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/jobs"
+          element={
+            <ProtectedRoute>
+              <Jobs />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/my-applications"
+          element={
+            <ProtectedRoute>
+              <UserApplications />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/jobs/:id"
+          element={
+            <ProtectedRoute>
+              <JobDetail />
+            </ProtectedRoute>
+          }
+        />
+
         <Route
           path="/profile/:id"
           element={

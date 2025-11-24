@@ -56,6 +56,9 @@ export default function CompanyHome() {
           <button onClick={goToProfile} style={{ padding: "8px 12px", borderRadius: 8, background: "#2563eb", color: "#fff", border: "none", cursor: "pointer" }}>
             Perfil da Empresa
           </button>
+          <button onClick={()=>navigate("/company/jobs")} style={{ marginLeft: 8, padding: "8px 12px", borderRadius: 8, background: "#06b6d4", color: "#fff", border: "none", cursor: "pointer" }}>
+            Minhas Vagas
+          </button>
         </div>
       </div>
     </div>

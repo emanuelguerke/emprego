@@ -127,3 +127,64 @@ h1, h2, h3 {
   font-size: 13px;
   margin-top: 6px;
 }
+
+/* Wide card for pages that need more horizontal space (company management) */
+.card--wide {
+  max-width: 980px;
+  padding: 28px;
+}
+
+/* Job list row layout */
+.job-row {
+  display: grid;
+  grid-template-columns: 1fr 380px; /* content | actions */
+  gap: 12px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+}
+
+/* content area should allow text wrap without pushing actions */
+.job-content {
+  min-width: 0; /* allow truncation/ellipsis */
+}
+
+/* title wrap/ellipsis handling */
+.job-title {
+  display: block;
+  word-break: break-word;
+  white-space: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* actions container with fixed column width */
+.job-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* buttons consistent sizing */
+.job-actions button {
+  min-width: 120px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+
+/* delete button variant */
+.job-actions button.delete {
+  background: #ef4444;
+  color: #fff;
+}
+
+/* Responsive: stack actions under content on narrow screens */
+@media (max-width: 760px) {
+  .card--wide { max-width: 100%; padding: 16px; }
+  .job-row { grid-template-columns: 1fr; gap: 8px; }
+  .job-actions { justify-content: flex-start; }
+  .job-actions button { min-width: 0; flex: 1 1 auto; }
+}

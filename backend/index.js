@@ -2,6 +2,8 @@ import express from "express";
 import userRoute from "./route/userRoute.js";
 import authRoute from "./route/authRoute.js";
 import companyRoute from "./route/companyRoute.js";
+import jobRoute from "./route/jobRoute.js";
+import errorRoute from "./route/errorRoute.js";
 import cors from "cors";
 import readline from "readline";
 import * as AuthModel from "./model/authModel.js"; // tive que colocar aqui por causa do token mas acredito que não seria a melhor forma
@@ -59,11 +61,17 @@ app.use((req, res, next) => {
 // Monta as rotas de auth na raiz -> /login e /logout
 app.use("/", authRoute);
 
+// rota de fallback de erros vindos do cliente
+app.use("/", errorRoute);
+
 // montar companies (registro público e rotas protegidas)
 app.use("/companies", companyRoute);
 
 // montar users
 app.use("/users", userRoute);
+
+// montar jobs
+app.use("/", jobRoute);
 
 // inicializar lista de tokens ativos a partir do DB e só então iniciar prompt + server
 AuthModel.initActiveTokens().catch((err) => {

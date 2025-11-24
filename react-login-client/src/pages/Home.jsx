@@ -59,6 +59,12 @@ export default function Home() {
           <button onClick={goToProfile} style={{ padding: "8px 12px", borderRadius: 8, background: "#2563eb", color: "#fff", border: "none", cursor: "pointer" }}>
             Perfil
           </button>
+          <button onClick={()=>navigate("/jobs")} style={{ marginLeft: 8, padding: "8px 12px", borderRadius: 8, background: "#10b981", color: "#fff", border: "none", cursor: "pointer" }}>
+            Vagas
+          </button>
+          <button onClick={()=>navigate("/my-applications")} style={{ marginLeft: 8, padding: "8px 12px", borderRadius: 8, background: "#06b6d4", color: "#fff", border: "none", cursor: "pointer" }}>
+            Minhas Candidaturas
+          </button>
         </div>
       </div>
     </div>
