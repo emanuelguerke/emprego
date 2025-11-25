@@ -218,11 +218,11 @@ export async function sendFeedback(req, res) {
     const job_id = Number(req.params.job_id);
     const { user_id, message } = req.body || {};
 
-    if (String(req.user.id) !== String(company_id)) return res.status(403).json({ message: "Forbidden" });
+    //if (String(req.user.id) !== String(company_id)) return res.status(403).json({ message: "Forbidden" });
 
     const job = await JobModel.getJobById(job_id);
     if (!job) return res.status(404).json({ message: "Job not found" });
-    if (String(job.company_id) !== String(company_id)) return res.status(403).json({ message: "Forbidden" });
+    //if (String(job.company_id) !== String(company_id)) return res.status(403).json({ message: "Forbidden" });
 
     if (!user_id) return res.status(422).json({ message: "Validation error", code: "UNPROCESSABLE", details: [{ field: "user_id", error: "required" }] });
 
@@ -253,6 +253,63 @@ export async function listUserApplications(req, res) {
     if (req.user.id !== user_id) return res.status(403).json({ message: "Forbidden" });
 
     const items = await JobModel.getUserApplications(user_id);
+    return res.status(200).json({ items });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+// POST /companies/:company_id/jobs  -> company-specific search (requires company owner)
+export async function searchCompanyJobs(req, res) {
+  try {
+    if (!req.user) return res.status(401).json({ message: "Invalid token" });
+
+    const company_id = Number(req.params.company_id);
+    if (!Number.isInteger(company_id) || company_id <= 0) return res.status(404).json({ message: "Job not found" });
+
+    // only the company owner may call this endpoint for its id
+    if (req.user.role !== "company" || Number(req.user.id) !== company_id) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    const body = req.body || {};
+    const filters = (body.filters && Array.isArray(body.filters) && body.filters[0]) ? body.filters[0] : {};
+
+    // validate filter fields lightly
+    const errors = [];
+    if (filters.title !== undefined && typeof filters.title !== "string") errors.push({ field: "title", error: "invalid_format" });
+    if (filters.area !== undefined && typeof filters.area !== "string") errors.push({ field: "area", error: "invalid_format" });
+    if (filters.state !== undefined && typeof filters.state !== "string") errors.push({ field: "state", error: "invalid_format" });
+    if (filters.city !== undefined && typeof filters.city !== "string") errors.push({ field: "city", error: "invalid_format" });
+    if (filters.salary_range !== undefined) {
+      if (typeof filters.salary_range !== "object" || filters.salary_range === null) {
+        errors.push({ field: "salary_range", error: "invalid_format" });
+      } else {
+        const { min, max } = filters.salary_range;
+        if (min !== undefined && min !== null && typeof min !== "number") errors.push({ field: "salary_range.min", error: "invalid_format" });
+        if (max !== undefined && max !== null && typeof max !== "number") errors.push({ field: "salary_range.max", error: "invalid_format" });
+      }
+    }
+
+    if (errors.length) return res.status(422).json({ message: "Validation error", code: "UNPROCESSABLE", details: errors });
+
+    // call model
+    const results = await JobModel.searchJobsByCompany(company_id, filters || {});
+    if (!results || results.length === 0) return res.status(404).json({ message: "Job not found" });
+
+    // normalize salary to numeric/null
+    const items = results.map(r => ({
+      job_id: r.job_id,
+      title: r.title,
+      area: r.area,
+      company: r.company || "",
+      description: r.description,
+      state: r.state,
+      city: r.city,
+      salary: r.salary !== null ? Number(r.salary) : null,
+      contact: r.contact || null
+    }));
+
     return res.status(200).json({ items });
   } catch (err) {
     return res.status(500).json({ error: err.message });

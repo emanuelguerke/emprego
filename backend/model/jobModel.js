@@ -84,6 +84,43 @@ export function searchJobs(filters) {
   });
 }
 
+// NEW: search jobs filtered by specific company_id
+export function searchJobsByCompany(company_id, filters) {
+  return new Promise((resolve, reject) => {
+    let sql = `SELECT j.id AS job_id, j.title, j.area, COALESCE(c.name, '') AS company, j.description, j.state, j.city, j.salary, COALESCE(j.contact_email, c.email) AS contact
+               FROM jobs j
+               LEFT JOIN companies c ON c.id = j.company_id
+               WHERE j.company_id = ?`;
+    const params = [company_id];
+
+    if (filters.title) {
+      sql += " AND j.title LIKE ?";
+      params.push(`%${filters.title}%`);
+    }
+    if (filters.area) {
+      sql += " AND j.area = ?";
+      params.push(filters.area);
+    }
+    if (filters.state) {
+      sql += " AND j.state LIKE ?";
+      params.push(`%${filters.state}%`);
+    }
+    if (filters.city) {
+      sql += " AND j.city LIKE ?";
+      params.push(`%${filters.city}%`);
+    }
+    if (filters.salary_range) {
+      if (filters.salary_range.min != null) { sql += " AND j.salary >= ?"; params.push(filters.salary_range.min); }
+      if (filters.salary_range.max != null) { sql += " AND j.salary <= ?"; params.push(filters.salary_range.max); }
+    }
+
+    db.query(sql, params, (err, results) => {
+      if (err) return reject(err);
+      resolve(results || []);
+    });
+  });
+}
+
 // applications
 export function createApplication(application) {
   return new Promise((resolve, reject) => {

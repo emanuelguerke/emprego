@@ -21,6 +21,13 @@ export async function searchJobs(filters) {
   return res.data;
 }
 
+// NEW: search jobs for a specific company (POST /companies/{company_id}/jobs)
+// sends filters array with a single object even if fields empty
+export async function searchCompanyJobs(company_id, filters) {
+  const res = await api.post(`/companies/${company_id}/jobs`, { filters: [filters || { title:"", area:"", state:"", city:"", salary_range: {} }] });
+  return res.data;
+}
+
 export async function getJob(id) {
   const res = await api.get(`/jobs/${id}`);
   return res.data;
@@ -46,8 +53,8 @@ export async function listCompanyApplicants(company_id, job_id) {
   return res.data;
 }
 
-export async function sendFeedback(company_id, job_id, payload) {
-  const res = await api.post(`/companies/${company_id}/jobs/${job_id}/feedback`, payload);
+export async function sendFeedback(job_id, payload) {
+  const res = await api.post(`jobs/${job_id}/feedback`, payload);
   return res.data;
 }
 

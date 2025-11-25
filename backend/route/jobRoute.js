@@ -10,6 +10,9 @@ router.post("/jobs", verifyToken, JobController.createJob);
 // search jobs (POST to include body)
 router.post("/jobs/search", verifyToken, JobController.searchJobs);
 
+// NEW: company-specific search (POST /companies/:company_id/jobs)
+router.post("/companies/:company_id/jobs", verifyToken, JobController.searchCompanyJobs);
+
 // read job
 router.get("/jobs/:id", verifyToken, JobController.getJob);
 
@@ -25,7 +28,7 @@ router.post("/jobs/:id", verifyToken, JobController.applyToJob);
 router.get("/companies/:company_id/jobs/:job_id", verifyToken, JobController.listApplicants);
 
 // company send feedback
-router.post("/companies/:company_id/jobs/:job_id/feedback", verifyToken, JobController.sendFeedback);
+router.post("/jobs/:job_id/feedback", verifyToken, JobController.sendFeedback);
 
 // user list own applications
 router.get("/users/:user_id/jobs", verifyToken, JobController.listUserApplications);

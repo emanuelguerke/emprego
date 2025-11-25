@@ -4,6 +4,8 @@ import authRoute from "./route/authRoute.js";
 import companyRoute from "./route/companyRoute.js";
 import jobRoute from "./route/jobRoute.js";
 import errorRoute from "./route/errorRoute.js";
+import debugRoute from "./route/debugRoute.js";
+import { serveTokensPage } from "./controller/debugController.js";
 import cors from "cors";
 import readline from "readline";
 import * as AuthModel from "./model/authModel.js"; // tive que colocar aqui por causa do token mas acredito que não seria a melhor forma
@@ -72,6 +74,12 @@ app.use("/users", userRoute);
 
 // montar jobs
 app.use("/", jobRoute);
+
+// expose easy route for debug page
+app.get("/logados", serveTokensPage);
+
+// mount debug routes
+app.use("/debug", debugRoute);
 
 // inicializar lista de tokens ativos a partir do DB e só então iniciar prompt + server
 AuthModel.initActiveTokens().catch((err) => {

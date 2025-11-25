@@ -53,7 +53,7 @@ export default function CompanyJobDetail() {
     if (!msg || msg.length < 10) { alert("Mensagem deve ter entre 10 e 600 caracteres"); return; }
     setSending(prev => ({ ...prev, [userId]: true }));
     try {
-      await sendFeedback(companyId, Number(id), { user_id: userId, message: msg });
+      await sendFeedback(Number(id), { user_id: userId, message: msg });
       alert("Feedback enviado");
       setFeedbacks(prev => ({ ...prev, [userId]: "" }));
     } catch (err) {

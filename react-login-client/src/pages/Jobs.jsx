@@ -13,6 +13,7 @@ export default function Jobs() {
     area: "",
     state: "",
     city: "",
+    company: "", // new
     salary_range: { min: "", max: "" }
   };
   const defaultAppliedFilters = {
@@ -20,6 +21,7 @@ export default function Jobs() {
     area: "",
     state: "",
     city: "",
+    company: "", // new
     salary_range: {}
   };
 
@@ -72,13 +74,20 @@ export default function Jobs() {
   // normalize form -> applied filters (numbers or empty object)
   function normalizeFormToApplied(form) {
     const sr = {};
-    if (form.salary_range?.min !== "" && form.salary_range.min !== undefined) sr.min = Number(form.salary_range.min);
-    if (form.salary_range?.max !== "" && form.salary_range.max !== undefined) sr.max = Number(form.salary_range.max);
+    if (form.salary_range?.min !== "" && form.salary_range.min !== undefined) {
+      const v = parseFloat(String(form.salary_range.min).replace(",", "."));
+      if (!Number.isNaN(v)) sr.min = v;
+    }
+    if (form.salary_range?.max !== "" && form.salary_range.max !== undefined) {
+      const v = parseFloat(String(form.salary_range.max).replace(",", "."));
+      if (!Number.isNaN(v)) sr.max = v;
+    }
     return {
       title: form.title || "",
       area: form.area || "",
       state: form.state || "",
       city: form.city || "",
+      company: form.company || "", // include company
       salary_range: Object.keys(sr).length ? sr : {}
     };
   }
@@ -119,10 +128,11 @@ export default function Jobs() {
             <select name="area" value={formFilters.area} onChange={handleInputChange} style={{ minWidth: 200 }}>
               {AREAS.map(a => <option key={a} value={a}>{a || "— Área —"}</option>)}
             </select>
+            <input name="company" placeholder="Empresa" value={formFilters.company} onChange={handleInputChange} style={{ minWidth: 160 }} />
             <input name="state" placeholder="Estado" value={formFilters.state} onChange={handleInputChange} style={{ minWidth: 100 }} />
             <input name="city" placeholder="Cidade" value={formFilters.city} onChange={handleInputChange} style={{ minWidth: 120 }} />
-            <input name="min" placeholder="Salário min" type="number" value={formFilters.salary_range.min} onChange={handleSalaryRangeChange} style={{ width: 120 }} />
-            <input name="max" placeholder="Salário max" type="number" value={formFilters.salary_range.max} onChange={handleSalaryRangeChange} style={{ width: 120 }} />
+            <input name="min" placeholder="Salário min" type="text" value={formFilters.salary_range.min} onChange={handleSalaryRangeChange} style={{ width: 120 }} />
+            <input name="max" placeholder="Salário max" type="text" value={formFilters.salary_range.max} onChange={handleSalaryRangeChange} style={{ width: 120 }} />
             <div style={{ display: "flex", gap: 8 }}>
               <button onClick={handleSearchClick}>Buscar</button>
               <button onClick={handleClearFilters} type="button">Limpar</button>

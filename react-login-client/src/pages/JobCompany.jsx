@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { createJob, searchJobs, updateJob, deleteJob } from "../services/jobService";
+import { createJob, searchCompanyJobs, searchJobs, updateJob, deleteJob } from "../services/jobService";
 import { decodeToken } from "../services/authService";
 import "../styles/app.css";
 
@@ -11,7 +11,33 @@ export default function JobCompany() {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // filters UI (strings) and applied filters (object sent to server)
+  const defaultFormFilters = { title: "", area: "", state: "", city: "", salary_range: { min: "", max: "" } };
+  const defaultAppliedFilters = { title: "", area: "", state: "", city: "", salary_range: {} };
+  const [formFilters, setFormFilters] = useState(defaultFormFilters);
+  const [filters, setFilters] = useState(defaultAppliedFilters);
+
   const AREAS = ['Administração','Agricultura','Artes','Atendimento ao Cliente','Comercial','Comunicação','Construção Civil','Consultoria','Contabilidade','Design','Educação','Engenharia','Finanças','Jurídica','Logística','Marketing','Produção','Recursos Humanos','Saúde','Segurança','Tecnologia da Informação','Telemarketing','Vendas','Outros'];
+
+  // normalize form filters -> object with numeric salary if present (parseFloat) or empty salary_range object
+  function normalizeFormToApplied(form) {
+    const sr = {};
+    if (form.salary_range?.min !== "" && form.salary_range.min !== undefined) {
+      const v = parseFloat(String(form.salary_range.min).replace(",", "."));
+      if (!Number.isNaN(v)) sr.min = v;
+    }
+    if (form.salary_range?.max !== "" && form.salary_range.max !== undefined) {
+      const v = parseFloat(String(form.salary_range.max).replace(",", "."));
+      if (!Number.isNaN(v)) sr.max = v;
+    }
+    return {
+      title: form.title || "",
+      area: form.area || "",
+      state: form.state || "",
+      city: form.city || "",
+      salary_range: Object.keys(sr).length ? sr : {}
+    };
+  }
 
   useEffect(()=>{
     if (!payload) { navigate("/login"); return; }
@@ -19,7 +45,11 @@ export default function JobCompany() {
     async function load() {
       setLoading(true);
       try {
-        const res = await searchJobs({ company: payload.username });
+        // use company id from token sub
+        const companyId = payload.sub;
+        // initial load: send current filters (empty => all)
+        const applied = filters || defaultAppliedFilters;
+        const res = await searchCompanyJobs(companyId, applied);
         if (mounted) setJobs(res.items || []);
       } catch (e) {
         if (mounted) setJobs([]);
@@ -27,23 +57,26 @@ export default function JobCompany() {
     }
     load();
     return ()=> { mounted = false; };
-  }, [navigate, payload?.username]);
+  }, [navigate, payload?.sub, filters]);
 
   async function handleCreate(e) {
     e.preventDefault();
     try {
       if (!payload) { navigate("/login"); return; }
+      const salaryVal = String(form.salary || "").trim();
+      const salaryNumber = salaryVal === "" ? undefined : parseFloat(salaryVal.replace(",", "."));
       const p = {
         title: form.title,
         area: form.area,
         description: form.description,
         state: form.state,
         city: form.city,
-        salary: form.salary ? Number(form.salary) : undefined
+        salary: salaryNumber
       };
       await createJob(p);
       alert("Vaga criada");
-      const res = await searchJobs({ company: payload.username });
+      // refresh using currently applied filters
+      const res = await searchCompanyJobs(payload.sub, filters || defaultAppliedFilters);
       setJobs(res.items || []);
       setForm({ title: "", area: "Outros", description: "", state: "", city: "", salary: "" });
     } catch (err) {
@@ -82,12 +115,12 @@ export default function JobCompany() {
       description: String(description).trim(),
       state: String(state).trim(),
       city: String(city).trim(),
-      salary: salaryStr === "" ? undefined : Number(salaryStr)
+      salary: salaryStr === "" ? undefined : parseFloat(String(salaryStr).replace(",", "."))
     };
 
     try {
       await updateJob(job.job_id, payloadUpdate);
-      const res = await searchJobs({ company: payload.username });
+      const res = await searchCompanyJobs(payload.sub, filters || defaultAppliedFilters);
       setJobs(res.items || []);
       alert("Vaga atualizada");
     } catch (err) {
@@ -99,11 +132,29 @@ export default function JobCompany() {
     navigate(`/company/jobs/${jobId}`);
   }
 
+  // filter handlers
+  function handleFilterChange(e) {
+    const { name, value } = e.target;
+    setFormFilters(prev => ({ ...prev, [name]: value }));
+  }
+  function handleFilterSalaryChange(e) {
+    const { name, value } = e.target; // min|max
+    setFormFilters(prev => ({ ...prev, salary_range: { ...(prev.salary_range||{}), [name]: value } }));
+  }
+  function handleClearFilters() {
+    setFormFilters(defaultFormFilters);
+    setFilters(defaultAppliedFilters);
+  }
+  function handleSearchClick() {
+    setFilters(normalizeFormToApplied(formFilters));
+  }
+
   return (
     <div className="page-root">
       {/* use wide card for company pages */}
       <div className="card card--wide">
         <h2>Vagas da Empresa</h2>
+
         <form onSubmit={handleCreate}>
           <label>Title<input value={form.title} onChange={e=>setForm({...form,title:e.target.value})} required/></label>
           <label>Area
@@ -114,7 +165,7 @@ export default function JobCompany() {
           <label>Description<textarea value={form.description} onChange={e=>setForm({...form,description:e.target.value})} required rows={4}/></label>
           <label>State<input value={form.state} onChange={e=>setForm({...form,state:e.target.value})} required/></label>
           <label>City<input value={form.city} onChange={e=>setForm({...form,city:e.target.value})} required/></label>
-          <label>Salary (optional)<input type="number" step="0.01" value={form.salary} onChange={e=>setForm({...form,salary:e.target.value})}/></label>
+          <label>Salary (optional)<input type="text" value={form.salary} onChange={e=>setForm({...form,salary:e.target.value})} placeholder="ex: 1523.00" /></label>
           <div style={{ display: "flex", gap: 8 }}>
             <button type="submit">Criar vaga</button>
             <button type="button" onClick={()=>navigate("/company")}>Voltar</button>
@@ -122,6 +173,26 @@ export default function JobCompany() {
         </form>
 
         <hr style={{ margin: "12px 0" }} />
+
+        {/* Filters for company job list (always send all fields even if empty) */}
+        <div style={{ marginBottom: 12, padding: 8, border: "1px solid #eee", borderRadius: 6 }}>
+          <h4>Filtros</h4>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+            <input name="title" placeholder="Título" value={formFilters.title} onChange={handleFilterChange} style={{ minWidth: 160 }} />
+            <select name="area" value={formFilters.area} onChange={handleFilterChange} style={{ minWidth: 180 }}>
+              <option value="">— Área —</option>
+              {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
+            </select>
+            <input name="state" placeholder="Estado" value={formFilters.state} onChange={handleFilterChange} style={{ minWidth: 120 }} />
+            <input name="city" placeholder="Cidade" value={formFilters.city} onChange={handleFilterChange} style={{ minWidth: 140 }} />
+            <input name="min" placeholder="Salário min" type="text" value={formFilters.salary_range.min} onChange={handleFilterSalaryChange} style={{ width: 120 }} />
+            <input name="max" placeholder="Salário max" type="text" value={formFilters.salary_range.max} onChange={handleFilterSalaryChange} style={{ width: 120 }} />
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={handleSearchClick} type="button">Buscar</button>
+              <button onClick={handleClearFilters} type="button">Limpar</button>
+            </div>
+          </div>
+        </div>
 
         <div>
           <h3>Vagas</h3>

@@ -55,12 +55,13 @@ export default function JobDetail() {
 
     setSubmitting(true);
     try {
+      // enviar todos os campos mesmo que vazios
       await applyToJob(Number(id), {
-        name: form.name,
-        email: form.email || undefined,
-        phone: form.phone || undefined,
-        education: form.education,
-        experience: form.experience
+        name: form.name || "",
+        email: form.email || "",
+        phone: form.phone || "",
+        education: form.education || "",
+        experience: form.experience || ""
       });
       alert("Candidatura enviada com sucesso");
       navigate("/jobs");
