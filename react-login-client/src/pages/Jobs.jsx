@@ -22,7 +22,7 @@ export default function Jobs() {
     state: "",
     city: "",
     company: "", // new
-    salary_range: {}
+    salary_range: { min: null, max: null } // changed: always include min/max (null when empty)
   };
 
   const [formFilters, setFormFilters] = useState(defaultFormFilters);
@@ -71,9 +71,9 @@ export default function Jobs() {
     navigate(`/jobs/${jobId}`);
   }
 
-  // normalize form -> applied filters (numbers or empty object)
+  // normalize form -> applied filters (numbers or null)
   function normalizeFormToApplied(form) {
-    const sr = {};
+    const sr = { min: null, max: null };
     if (form.salary_range?.min !== "" && form.salary_range.min !== undefined) {
       const v = parseFloat(String(form.salary_range.min).replace(",", "."));
       if (!Number.isNaN(v)) sr.min = v;
@@ -87,8 +87,8 @@ export default function Jobs() {
       area: form.area || "",
       state: form.state || "",
       city: form.city || "",
-      company: form.company || "", // include company
-      salary_range: Object.keys(sr).length ? sr : {}
+      company: form.company || "",
+      salary_range: sr
     };
   }
 

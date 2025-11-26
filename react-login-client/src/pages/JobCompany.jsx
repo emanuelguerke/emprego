@@ -13,15 +13,15 @@ export default function JobCompany() {
 
   // filters UI (strings) and applied filters (object sent to server)
   const defaultFormFilters = { title: "", area: "", state: "", city: "", salary_range: { min: "", max: "" } };
-  const defaultAppliedFilters = { title: "", area: "", state: "", city: "", salary_range: {} };
+  const defaultAppliedFilters = { title: "", area: "", state: "", city: "", salary_range: { min: null, max: null } }; // changed
   const [formFilters, setFormFilters] = useState(defaultFormFilters);
   const [filters, setFilters] = useState(defaultAppliedFilters);
 
   const AREAS = ['Administração','Agricultura','Artes','Atendimento ao Cliente','Comercial','Comunicação','Construção Civil','Consultoria','Contabilidade','Design','Educação','Engenharia','Finanças','Jurídica','Logística','Marketing','Produção','Recursos Humanos','Saúde','Segurança','Tecnologia da Informação','Telemarketing','Vendas','Outros'];
 
-  // normalize form filters -> object with numeric salary if present (parseFloat) or empty salary_range object
+  // normalize form filters -> object with numeric salary or nulls
   function normalizeFormToApplied(form) {
-    const sr = {};
+    const sr = { min: null, max: null };
     if (form.salary_range?.min !== "" && form.salary_range.min !== undefined) {
       const v = parseFloat(String(form.salary_range.min).replace(",", "."));
       if (!Number.isNaN(v)) sr.min = v;
@@ -35,7 +35,7 @@ export default function JobCompany() {
       area: form.area || "",
       state: form.state || "",
       city: form.city || "",
-      salary_range: Object.keys(sr).length ? sr : {}
+      salary_range: sr
     };
   }
 
