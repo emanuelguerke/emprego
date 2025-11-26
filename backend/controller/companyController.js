@@ -1,5 +1,6 @@
 import * as CompanyModel from "../model/companyModel.js";
 import * as AuthModel from "../model/authModel.js";
+import * as JobModel from "../model/jobModel.js";
 
 function isValidEmail(email) {
   const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -228,6 +229,12 @@ export async function deleteCompany(req, res) {
 
     const current = await CompanyModel.getCompanyById(id);
     if (!current) return res.status(404).json({ message: "company not found" });
+
+    // new: prevent deletion if company has active jobs
+    const jobs = await JobModel.searchJobsByCompany(Number(id), {});
+    if (jobs && jobs.length > 0) {
+      return res.status(409).json({ message: "Cannot delete company with active jobs" });
+    }
 
     // revoke current token + all tokens for this id
     try {
