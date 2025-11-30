@@ -124,7 +124,16 @@ export function searchJobsByCompany(company_id, filters) {
 // applications
 export function createApplication(application) {
   return new Promise((resolve, reject) => {
-    const sql = `INSERT INTO applications (job_id, user_id, name, email, phone, education, experience) VALUES (?, ?, ?, ?, ?, ?, ?)`;
+    const sql = `
+      INSERT INTO applications (job_id, user_id, name, email, phone, education, experience)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE 
+        name = VALUES(name),
+        email = VALUES(email),
+        phone = VALUES(phone),
+        education = VALUES(education),
+        experience = VALUES(experience)
+    `;
     db.query(sql, [application.job_id, application.user_id || null, application.name, application.email || null, application.phone || null, application.education, application.experience], (err, result) => {
       if (err) return reject(err);
       resolve({ id: result.insertId, ...application });
@@ -201,7 +210,6 @@ export function addFeedback(applicationId, feedback) {
   });
 }
 
-// adiciona atualização de feedback por job_id + user_id (usado quando não expomos id da aplicação)
 export function addFeedbackByJobUser(job_id, user_id, feedback) {
   return new Promise((resolve, reject) => {
     const sql = `UPDATE applications SET feedback = ? WHERE job_id = ? AND user_id = ?`;

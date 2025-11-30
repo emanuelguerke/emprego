@@ -3,8 +3,8 @@ import * as CompanyModel from "../model/companyModel.js";
 import * as UserModel from "../model/userModel.js";
 import { getTokenRecord } from "../model/authModel.js";
 
-// helper validations (minimal)
-const AREAS = ['Administração','Agricultura','Artes','Atendimento ao Cliente','Comercial','Comunicação','Construção Civil','Consultoria','Contabilidade','Design','Educação','Engenharia','Finanças','Jurídica','Logística','Marketing','Produção','Recursos Humanos','Saúde','Segurança','Tecnologia da Informação','Telemarketing','Vendas','Outros'];
+// validação provisória até eu fazer algo melhor kkkkkkkk
+const AREAS = ['administração','Administração','ADMINISTRAÇÃO','agricultura','Agricultura', 'AGRICULTURA','artes','Artes','ARTES','atendimento ao cliente','Atendimento ao Cliente', 'ATENDIMENTO AO CLIENTE','comercial','Comercial', 'COMERCIAL','comunicacao','COMUNICAÇÃO','Comunicação','construcao civil','Construção Civil','CONSTRUÇÃO CIVIL','consultoria','Consultoria','CONSULTORIA','contabilidade','Contabilidade','CONTABILIDADE','design','Design','DESIGN','educacao','Educação','EDUCAÇÃO','engenharia','Engenharia','ENGENHARIA','finanças','Finanças','FINANÇAS','jurídica','Jurídica','JURÍDICA','logística','Logística','LOGÍSTICA','Marketing','marketing','MARKETING','produção','Produção','PRODUÇÃO','recursos humanos','Recursos Humanos','RECURSOS HUMANOS','saúde','Saúde','SAÚDE','segurança','Segurança','SEGURANÇA','Tecnologia da Informação','tecnologia da informação','TECNOLOGIA DA INFORMAÇÃO','telemarketing','Telemarketing','TELEMARKETING','vendas','Vendas','VENDAS','outros','Outros','OUTROS'];
 
 function isValidTitle(t){ const s = String(t||"").trim(); return s.length>=3 && s.length<=150; }
 function isValidArea(a){ return AREAS.includes(String(a||"")); }
@@ -275,7 +275,7 @@ export async function searchCompanyJobs(req, res) {
     const body = req.body || {};
     const filters = (body.filters && Array.isArray(body.filters) && body.filters[0]) ? body.filters[0] : {};
 
-    // validate filter fields lightly
+    // validate filter fields
     const errors = [];
     if (filters.title !== undefined && typeof filters.title !== "string") errors.push({ field: "title", error: "invalid_format" });
     if (filters.area !== undefined && typeof filters.area !== "string") errors.push({ field: "area", error: "invalid_format" });
@@ -293,7 +293,7 @@ export async function searchCompanyJobs(req, res) {
 
     if (errors.length) return res.status(422).json({ message: "Validation error", code: "UNPROCESSABLE", details: errors });
 
-    // call model
+    // model
     const results = await JobModel.searchJobsByCompany(company_id, filters || {});
     if (!results || results.length === 0) return res.status(404).json({ message: "Job not found" });
 
