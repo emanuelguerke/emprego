@@ -2,7 +2,7 @@
 
 Este é um projeto acadêmico desenvolvido para a disciplina de Cliente-Servidor da Universidade Tecnológica Federal do Paraná (UTFPR).
 
-O sistema consiste em uma plataforma de cadastro e busca de vagas de emprego, implementada com uma arquitetura cliente-servidor. O **Backend** é uma API RESTful desenvolvida em Node.js com Express, e o **Frontend** é uma aplicação em React/Vite que consome essa API.
+O sistema consiste em uma plataforma de cadastro e busca de vagas de emprego, implementada com uma arquitetura cliente-servidor. O **Backend** é uma API RESTful desenvolvida em Node.js com Express, e o **Frontend** é uma aplicação em React/Axios que consome essa API.
 
 ## Tecnologias Utilizadas
 
@@ -122,3 +122,21 @@ Você precisará de **dois terminais** abertos para executar o projeto completo.
   *Na primeira vez que abrir a pagina você será direcionado para Setup onde ira inserir o ip/porta da API, caso precise voltar para o setup clique na engrenagem na tela de login.
 
   
+
+### Contas jã criadas no banco para testes de vaga
+
+
+usuario: usuario
+senha: usuario
+
+usuario: empresa
+senha: empresa
+
+
+### Interface servidor para usuarios logados
+
+ip:porta/logados
+
+exemplo
+
+http://localhost:21000/logados
